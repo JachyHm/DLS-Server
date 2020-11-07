@@ -54,6 +54,11 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
                     $package->id = $package_id;
                     $package->file_name = $row["file_name"];
                     $package->display_name = $row["display_name"];
+                    $package->category = $row["category"];
+                    $package->era = $row["era"];
+                    $package->country = $row["country"];
+                    $package->paid = $row["paid"];
+                    $package->steamappid = $row["steamappid"];
                     $package->version = $row["version"];
                     $package->owner = $row["owner"];
                     $package->created = $row["datetime"];
@@ -129,6 +134,11 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
             $package->id = $package_id;
             $package->file_name = $row["file_name"];
             $package->display_name = $row["display_name"];
+            $package->category = $row["category"];
+            $package->era = $row["era"];
+            $package->country = $row["country"];
+            $package->paid = $row["paid"];
+            $package->steamappid = $row["steamappid"];
             $package->version = $row["version"];
             $package->owner = $row["owner"];
             $package->created = $row["datetime"];
