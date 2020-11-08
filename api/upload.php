@@ -152,12 +152,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         if ($sql->execute()) {
                                             $package_id = $mysqli->insert_id;
             
-                                            foreach ($files as $fname) {        
-                                                //if (strtolower(pathinfo($fname, PATHINFO_EXTENSION)) == 'bin') {
-                                                $sql = $mysqli->prepare('INSERT INTO `file_list`(`package_id`, `fname`) VALUES(?, ?);');
-                                                $sql->bind_param('is', $package_id, $fname);
-                                                $sql->execute();
-                                                //}
+                                            foreach ($files as $fname) {
+                                                $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
+                                                if ($ext == "bin" || $ext == "xml") {
+                                                    $name = pathinfo($fname, PATHINFO_FILENAME);
+                                                    $sql = $mysqli->prepare('INSERT INTO `file_list`(`package_id`, `fname`) VALUES(?, ?);');
+                                                    $sql->bind_param('is', $package_id, $name);
+                                                    $sql->execute();
+                                                }
                                             }
                                             
                                             if (isset($_POST["depends"])) {

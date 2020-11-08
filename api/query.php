@@ -57,11 +57,13 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
                     $package->category = $row["category"];
                     $package->era = $row["era"];
                     $package->country = $row["country"];
-                    $package->paid = $row["paid"];
-                    $package->steamappid = $row["steamappid"];
                     $package->version = $row["version"];
                     $package->owner = $row["owner"];
                     $package->created = $row["datetime"];
+                    $package->description = $row["description"];
+                    $package->target_path = $row["target_path"];
+                    $package->paid = $row["paid"];
+                    $package->steamappid = $row["steamappid"];
                     $package->files = array();
                     $package->dependencies = array();
 
@@ -101,7 +103,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
         flushResponse(-1, "No package containing such file found!", new stdClass(), $mysqli);
     }
 } else if (isset($_GET["listFiles"]) || isset($_POST["listFiles"])) {
-    $sql = $mysqli->prepare('SELECT * FROM `file_list` WHERE `fname` LIKE "%.%bin" OR `fname` LIKE "%.%xml";');
+    $sql = $mysqli->prepare('SELECT `fname` FROM `file_list` WHERE `paid` = 0;');
     $sql->execute();
     $queryResult = $sql->get_result();
 
@@ -113,9 +115,25 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
             }
             flushResponse(1, "Success!", $files, $mysqli);
         }
-        flushResponse(-1, "No packages found!", new stdClass(), $mysqli);
+        flushResponse(-1, "No packages found!", array(), $mysqli);
     }
-    flushResponse(-1, "No packages found!", new stdClass(), $mysqli);
+    flushResponse(-1, "No packages found!", array(), $mysqli);
+} else if (isset($_GET["listPaid"]) || isset($_POST["listPaid"])) {
+    $sql = $mysqli->prepare('SELECT `fname` FROM `file_list` LEFT JOIN `package_list` ON `file_list`.`package_id` = `package_list`.`id` WHERE `paid` = 1;');
+    $sql->execute();
+    $queryResult = $sql->get_result();
+
+    if (!empty($queryResult)) {
+        if ($queryResult->num_rows > 0) {
+            $files = array();
+            while ($row = $queryResult->fetch_assoc()) {
+                $files[] = $row["fname"];
+            }
+            flushResponse(1, "Success!", $files, $mysqli);
+        }
+        flushResponse(-1, "No packages found!", array(), $mysqli);
+    }
+    flushResponse(-1, "No packages found!", array(), $mysqli);
 } else if (isset($_GET["id"]) || isset($_POST["id"])) {
     if (isset($_GET["id"])) {
         $package_id = trim($_GET["id"]);
@@ -206,7 +224,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
                     break;
                 }
             }
-            flushResponse(-1, "Nothing found!".$sql->error, new stdClass(), $mysqli);
+            flushResponse(-1, "Nothing found!".$sql->error, array(), $mysqli);
             break;
         case 2:
             $query .= "`description` LIKE ?";
@@ -240,7 +258,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
                     break;
                 }
             }
-            flushResponse(-1, "Nothing found!".$sql->error, new stdClass(), $mysqli);
+            flushResponse(-1, "Nothing found!".$sql->error, array(), $mysqli);
             break;
         default:
             $query .= "`description` LIKE ?";
@@ -310,9 +328,9 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
                 flushResponse(1, "Success!", $rows, $mysqli);
             }
         }
-        flushResponse(-1, "Nothing found!".$sql->error, new stdClass(), $mysqli);
+        flushResponse(-1, "Nothing found!".$sql->error, array(), $mysqli);
     }
-    flushResponse(-1, "Unknown error: ".$sql->error, new stdClass(), $mysqli);
+    flushResponse(-1, "Unknown error: ".$sql->error, array(), $mysqli);
 } else if (isset($_GET["searchFor"]) || isset($_POST["searchFor"])) {
     if (isset($_GET["searchFor"])) {
         $keyword = trim(urldecode($_GET["searchFor"]))."%";
@@ -365,11 +383,11 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
                 flushResponse(1, "Success!", $rows, $mysqli);
             }
 
-            flushResponse(-1, "Nothing found!", new stdClass(), $mysqli);
+            flushResponse(-1, "Nothing found!", array(), $mysqli);
         }
-        flushResponse(-1, "Unknown error!", new stdClass(), $mysqli);
+        flushResponse(-1, "Unknown error!", array(), $mysqli);
     } else {
-        flushResponse(-1, "Nothing to search for!", new stdClass(), $mysqli);
+        flushResponse(-1, "Nothing to search for!", array(), $mysqli);
     }
 } else if (isset($_GET["packageFile"]) || isset($_POST["packageFile"])) {
     if (isset($_GET["packageFile"])) {

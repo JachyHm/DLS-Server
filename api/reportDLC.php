@@ -44,62 +44,60 @@ try {
                 $store_page = "<a href=\"https://store.steampowered.com/app/$id\">https://store.steampowered.com/app/$id</a>";
                 $response = file_get_contents("http://store.steampowered.com/api/appdetails/?appids=$id");
 
+                $success = false;
                 if ($response) {
                     $decoded_resp = json_decode($response)->$id;
 
                     $success = $decoded_resp->success;
+                }
+                if (!$success) {
+                    array_push($errors, "$id isn't DLC!");
+                    $display_name = "Unknown DLC placeholder";
+                    $description = "What you see is placeholder for unlisted DLC. Please do not edit, nor delete this package. These are usually packages which are already part of game, or another DLC, but are also important for DLS functioning.";
+                    $release_date = "1970-01-01";
 
-                    if (!$success) {
-                        array_push($errors, "$id isn't DLC!");
-                        $display_name = "Unknown DLC placeholder";
-                        $description = "What you see is placeholder for unlisted DLC. Please do not edit, nor delete this package. These are usually packages which are already part of game, or another DLC, but are also important for DLS functioning.";
-                        $release_date = "1970-01-01";
+                    $files = $dlc->IncludedFiles;
 
-                        $files = $dlc->IncludedFiles;
+                    $sql = $mysqli->prepare('INSERT INTO `package_list` (`file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`) VALUES (?, ?, 8, -1, -1, -1, -1, ?, ?, "", 1, ?) ON DUPLICATE KEY UPDATE `id` = `id`;');
+                    $sql->bind_param('ssssi', $store_page, $display_name, $release_date, $description, $id);
+                    $sql->execute();
 
-                        $sql = $mysqli->prepare('INSERT INTO `package_list` (`file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`) VALUES (?, ?, -1, -1, -1, -1, -1, ?, ?, "", 1, ?) ON DUPLICATE KEY UPDATE `id` = `id`;');
-                        $sql->bind_param('ssssi', $store_page, $display_name, $release_date, $description, $id);
-                        $sql->execute();
-
-                        $package_id = $mysqli->insert_id;
-                        if ($package_id>0) {
-                            $sql = $mysqli->prepare('INSERT INTO `file_list` (`package_id`, `fname`) VALUES (?, ?);');
-                            foreach ($files as $file_name) {
-                                $sql->bind_param('is', $package_id, $file_name);
-                                $sql->execute();
-                            }
-                        }
-                    } else {
-                        $data = $decoded_resp->data;
-                        if (isset($data->fullgame) && !$data->fullgame->appid == 24010) {
-                            array_push($errors, "$id isn't Train Simulator DLC!");
-                        }
-                        $display_name = $data->name ?? "Unknown DLC placeholder";
-                        $description = $data->short_description ?? "What you see is placeholder for unlisted DLC. Please do not edit, nor delete this package. These are usually packages which are already part of game, or another DLC, but are also important for DLS functioning.";
-                        $date_obj = DateTime::createFromFormat("j M, Y", $data->release_date->date);
-                        if ($date_obj) {
-                            $release_date = $date_obj->format('Y-m-d');
-                        } else {
-                            $release_date = "1970-01-01";
-                        }
-                
-                        $files = $dlc->IncludedFiles;
-                
-                        $sql = $mysqli->prepare('INSERT INTO `package_list` (`file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`) VALUES (?, ?, -1, -1, -1, -1, -1, ?, ?, "", 1, ?) ON DUPLICATE KEY UPDATE `id` = `id`;');
-                        $sql->bind_param('ssssi', $store_page, $display_name, $release_date, $description, $id);
-                        $sql->execute();
-                
-                        $package_id = $mysqli->insert_id;
-                        if ($package_id>0) {
-                            $sql = $mysqli->prepare('INSERT INTO `file_list` (`package_id`, `fname`) VALUES (?, ?);');
-                            foreach ($files as $file_name) {
-                                $sql->bind_param('is', $package_id, $file_name);
-                                $sql->execute();
-                            }
+                    $package_id = $mysqli->insert_id;
+                    if ($package_id>0) {
+                        $sql = $mysqli->prepare('INSERT INTO `file_list` (`package_id`, `fname`) VALUES (?, ?);');
+                        foreach ($files as $file_name) {
+                            $sql->bind_param('is', $package_id, $file_name);
+                            $sql->execute();
                         }
                     }
                 } else {
-                    flushResponse(-1, "Fatal error occured!", new stdClass(), $mysqli);
+                    $data = $decoded_resp->data;
+                    if (isset($data->fullgame) && !$data->fullgame->appid == 24010) {
+                        array_push($errors, "$id isn't Train Simulator DLC!");
+                    }
+                    $display_name = $data->name ?? "Unknown DLC placeholder";
+                    $description = $data->short_description ?? "What you see is placeholder for unlisted DLC. Please do not edit, nor delete this package. These are usually packages which are already part of game, or another DLC, but are also important for DLS functioning.";
+                    $date_obj = DateTime::createFromFormat("j M, Y", $data->release_date->date);
+                    if ($date_obj) {
+                        $release_date = $date_obj->format('Y-m-d');
+                    } else {
+                        $release_date = "1970-01-01";
+                    }
+            
+                    $files = $dlc->IncludedFiles;
+            
+                    $sql = $mysqli->prepare('INSERT INTO `package_list` (`file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`) VALUES (?, ?, 8, -1, -1, -1, -1, ?, ?, "", 1, ?) ON DUPLICATE KEY UPDATE `id` = `id`;');
+                    $sql->bind_param('ssssi', $store_page, $display_name, $release_date, $description, $id);
+                    $sql->execute();
+            
+                    $package_id = $mysqli->insert_id;
+                    if ($package_id>0) {
+                        $sql = $mysqli->prepare('INSERT INTO `file_list` (`package_id`, `fname`) VALUES (?, ?);');
+                        foreach ($files as $file_name) {
+                            $sql->bind_param('is', $package_id, $file_name);
+                            $sql->execute();
+                        }
+                    }
                 }
             } else {
                 array_push($errors, "$id already exists!");
