@@ -16,6 +16,14 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
     $context  = stream_context_create($options);
     $result = json_decode(file_get_contents($url, false, $context));
 
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) { //check ip from share internet
+        $ip=$_SERVER['HTTP_CLIENT_IP'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { //to check ip is pass from proxy
+        $ip=$_SERVER['HTTP_X_FORWARDED_FOR'];
+    } else {
+        $ip=$_SERVER['REMOTE_ADDR'];
+    }
+
     if ($result && $result->success && $result->score > 0.5 && $result->action == "register" && $result->hostname == "dls.rw.jachyhm.cz") {
         if (isset($_POST["password"]) && isset($_POST["email"]) && isset($_POST["nickname"])) {
             $password = trim($_POST["password"]);
@@ -24,58 +32,62 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
             $update = isset($_GET["update"]);
 
             if ($update) {
-                $message = "";
-                if (!empty($password)) {
-                    $sql = $mysqli->prepare('UPDATE `users` SET `password`=? WHERE `email`=?;');
-                    $sql->bind_param('ss', password_hash($password, PASSWORD_DEFAULT), $email);
-                    $res = $sql->execute();
-                    if (!$res) {
-                        $response->code = -1;
-                        $response->message = "Updating password failed!";
-
-                        $response_json = json_encode($response);
-
-                        $mysqli->close();
-                        die($response_json);
+                if ($_SESSION["logged"] && $_SESSION["email"] == $email) {
+                    $message = "";
+                    if (!empty($password)) {
+                        $sql = $mysqli->prepare('UPDATE `users` SET `password`=? WHERE `email`=?;');
+                        $sql->bind_param('ss', password_hash($password, PASSWORD_DEFAULT), $email);
+                        $res = $sql->execute();
+                        if (!$res) {
+                            $response->code = -1;
+                            $response->message = "Updating password failed!";
+    
+                            $response_json = json_encode($response);
+    
+                            $mysqli->close();
+                            die($response_json);
+                        }
+                        $message .= "Password ";
                     }
-                    $message .= "Password ";
-                }
-                if (!empty($nick)) {
-                    $sql = $mysqli->prepare('UPDATE `users` SET `nickname`=? WHERE `email`=?;');
-                    $sql->bind_param('ss', $nick, $email);
-                    $res = $sql->execute();
-                    if (!$res) {
-                        $response->code = -1;
-                        $response->message = "Updating nickname failed!";
-
-                        $response_json = json_encode($response);
-
-                        $mysqli->close();
-                        die($response_json);
+                    if (!empty($nick)) {
+                        $sql = $mysqli->prepare('UPDATE `users` SET `nickname`=? WHERE `email`=?;');
+                        $sql->bind_param('ss', $nick, $email);
+                        $res = $sql->execute();
+                        if (!$res) {
+                            $response->code = -1;
+                            $response->message = "Updating nickname failed!";
+    
+                            $response_json = json_encode($response);
+    
+                            $mysqli->close();
+                            die($response_json);
+                        }
+                        $_SESSION["realname"] = $nick;
+                        if (strlen($message) > 0) {
+                            $message .= "and nickname ";
+                        } else {
+                            $message .= "Nickname ";
+                        }
                     }
-                    $_SESSION["realname"] = $nick;
+    
+                    $response->code = -1;
+                    $response->message = "Nothing was updated!";
+    
                     if (strlen($message) > 0) {
-                        $message .= "and nickname ";
-                    } else {
-                        $message .= "Nickname ";
+                        $message .= "was successfully updated.";
+    
+                        $response->code = 1;
+                        $response->message = $message;
+                        $response->newNick = $nick;
                     }
+    
+                    $response_json = json_encode($response);
+    
+                    db_log(12, true, $_SESSION["userid"], $ip, $email, "User data changed!", $mysqli);
+                    $mysqli->close();
+                    die($response_json);
                 }
-
-                $response->code = -1;
-                $response->message = "Nothing was updated!";
-
-                if (strlen($message) > 0) {
-                    $message .= "was successfully updated.";
-
-                    $response->code = 1;
-                    $response->message = $message;
-                    $response->newNick = $nick;
-                }
-
-                $response_json = json_encode($response);
-
-                $mysqli->close();
-                die($response_json);
+                db_log(12, false, -1, $ip, $email, "Unpermitted user data change!", $mysqli);
             } elseif (!empty($password) && !empty($email) && !empty($nick)) {
                 $token = bin2hex(random_bytes(32));
                 $password_hash = password_hash($password, PASSWORD_DEFAULT);
@@ -98,6 +110,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
                     
                         $response_json = json_encode($response);
                     
+                        db_log(12, true, -1, $ip, $email, "User registered successfully!", $mysqli);
                         $mysqli->close();
                         die($response_json);
                     } else {
@@ -136,11 +149,12 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
 
                 $response_json = json_encode($response);
 
+                db_log(12, false, -1, $ip, $email, "Failed registration: $message!", $mysqli);
                 $mysqli->close();
                 die($response_json);
             }
         } elseif (isset($_GET["resend"]) && isset($_GET["email"])) {
-            $sql = $mysqli->prepare('SELECT * FROM `users` WHERE `email` = ?;');
+            $sql = $mysqli->prepare('SELECT * FROM `users` WHERE `email` = ? AND NOT `valid_email`;');
             $sql->bind_param('s', $_GET["email"]);
             $sql->execute();
             $queryResult = $sql->get_result();
@@ -164,6 +178,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
 
                     $response_json = json_encode($response);
                     
+                    db_log(14, true, $row["id"], $ip, $email, "Verification email resent!", $mysqli);
                     $mysqli->close();
                     die($response_json);
                 }
@@ -173,6 +188,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
 
             $response_json = json_encode($response);
             
+            db_log(14, false, -1, $ip, $email, "Verification email not resent!", $mysqli);
             $mysqli->close();
             die($response_json);
         } elseif (isset($_GET["resetPwd"]) && isset($_GET["email"])) {
@@ -199,6 +215,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
                         'Reply-To: noreply@jachyhm.cz' . "\r\n" .
                         'X-Mailer: PHP/' . phpversion();
                     mail($to, $subject, $message, $headers);
+                    db_log(13, false, $row["id"], $ip, $email, "Password reset email sent!", $mysqli);
                 }
             }
                 
@@ -207,6 +224,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
 
             $response_json = json_encode($response);
 
+            db_log(13, false, -1, $ip, $email, "Password reset email not sent!", $mysqli);
             $mysqli->close();
             die($response_json);
         }
@@ -216,6 +234,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
 
         $response_json = json_encode($response);
 
+        db_log(12, false, -1, $ip, $email, "ReCaptcha failed!", $mysqli);
         $mysqli->close();
         die($response_json);
     }

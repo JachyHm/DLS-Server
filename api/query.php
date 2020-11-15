@@ -1,5 +1,4 @@
 <?php
-header('Content-type: application/json');
 require "../dls_db.php";
 
 function flushResponse($code, $message, $body, $mysqli) 
@@ -12,6 +11,18 @@ function flushResponse($code, $message, $body, $mysqli)
 
     $mysqli->close();
     
+    $supportsGzip = false;
+    if (isset($_SERVER['HTTP_ACCEPT_ENCODING'])) {
+        $supportsGzip = strpos($_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip') !== false;
+    }
+    if ($supportsGzip) {
+        $response_json = gzencode($response_json, 9);
+        header('Content-Encoding: gzip');
+    }
+
+    header("Cache-Control: must-revalidate");
+    header('Content-Type: application/json; Charset: UTF-8');
+    header('Content-Length: ' . strlen($response_json));
     die($response_json);
 }
 
@@ -21,6 +32,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
     } else {
         $fname = "%".trim(urldecode($_POST["file"]))."%";
     }
+    $fname = str_replace('\\', '/', $fname);
 
     $sql = $mysqli->prepare('SELECT * FROM `file_list` WHERE `fname` LIKE ?;');
     $sql->bind_param('s', $fname);
@@ -103,7 +115,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
         flushResponse(-1, "No package containing such file found!", new stdClass(), $mysqli);
     }
 } else if (isset($_GET["listFiles"]) || isset($_POST["listFiles"])) {
-    $sql = $mysqli->prepare('SELECT `fname` FROM `file_list` WHERE `paid` = 0;');
+    $sql = $mysqli->prepare('SELECT `fname` FROM `file_list` LEFT JOIN `package_list` ON `file_list`.`package_id` = `package_list`.`id` WHERE `paid` = 0;');
     $sql->execute();
     $queryResult = $sql->get_result();
 
@@ -198,6 +210,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
     $query_array = array();
 
     $keyword = trim(urldecode($_GET["keyword"]));
+    $keyword = str_replace('\\', '/', $keyword);
     if (!empty($keyword)) {
         $switch = 9;
         if (isset($_GET["searchBy"])) {
@@ -395,6 +408,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
     } else {
         $keyword = trim(urldecode($_POST["packageFile"]));
     }
+    $keyword = str_replace('\\', '/', $keyword);
     if (!empty($keyword)) {
         $sql = $mysqli->prepare('SELECT * FROM `package_list` WHERE `file_name` = ?;');
         $sql->bind_param("s", $keyword);

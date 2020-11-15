@@ -8,6 +8,15 @@ session_start();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_SESSION["logged"]) && $_SESSION["logged"] && isset($_SESSION["userid"])) {
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) { //check ip from share internet
+            $ip=$_SERVER['HTTP_CLIENT_IP'];
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { //to check ip is pass from proxy
+            $ip=$_SERVER['HTTP_X_FORWARDED_FOR'];
+        } else {
+            $ip=$_SERVER['REMOTE_ADDR'];
+        }
+
+        include "../dls_db.php";
         if (isset($_SESSION["privileges"]) && $_SESSION["privileges"] > 0) {
             $userid = $_SESSION["userid"];
             if (strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION)) == "zip") {
@@ -23,9 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     if (!empty($target_path) && preg_match('/^(?:[^?%*:|"><.]+(?:|\/)?)+$/', $target_path)) {
                         if (@is_uploaded_file($_FILES['file']['tmp_name'])) {
-                            if ($_FILES['file']['size'] < $max_size) {
-                                include "../dls_db.php";
-                                
+                            if ($_FILES['file']['size'] < $max_size) {                                
                                 $desc = trim($_POST["description"]);
                                 $display_name = trim($_POST["packageName"]);
                                 $category = $_POST["category"];
@@ -62,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         
                                         $response_json = json_encode($response);
                                         
+                                        db_log(17, false, $userid, $ip, $_SESSION["token"], "No package to update!", $mysqli);
                                         die($response_json);
                                     }
                                 }
@@ -81,6 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 
                                                 $response_json = json_encode($response);
                                                 
+                                                db_log(17, false, $userid, $ip, $_SESSION["token"], "Another package with this name already exists.!", $mysqli);
                                                 die($response_json);
                                             }
                                         } else if ($row["owner"] == $userid) {
@@ -94,6 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             
                                             $response_json = json_encode($response);
                                             
+                                            db_log(17, false, $userid, $ip, $_SESSION["token"], "Another package with this name already exists.!", $mysqli);
                                             die($response_json);
                                         }
                                     }
@@ -116,9 +126,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $za->open($_FILES['file']['tmp_name']);
                                 for ($i = 0; $i < $za->numFiles; $i++) {
                                     $stat = $za->statIndex($i);
-                                    if (pathinfo($stat['name'], PATHINFO_EXTENSION) && !in_array(strtolower(pathinfo($stat['name'], PATHINFO_EXTENSION)), array("cost", "tgt", "xml"))) {
-                                        $fname = $target_path.$stat['name'];
-                                        array_push($files, $fname);
+                                    $_name = $stat['name'];
+                                    $ext = pathinfo($_name, PATHINFO_EXTENSION);
+                                    if ($ext && in_array(strtolower($ext), array("bin", "xml"))) {
+                                        $dir = pathinfo($_name, PATHINFO_DIRNAME)."/";
+                                        $basename = pathinfo($_name, PATHINFO_FILENAME);
+                                        $fname = $target_path.$dir.$basename;
+                                        array_push($files, str_replace('\\', '/', $fname));
                                     }
                                 }
 
@@ -153,13 +167,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             $package_id = $mysqli->insert_id;
             
                                             foreach ($files as $fname) {
-                                                $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
-                                                if ($ext == "bin" || $ext == "xml") {
-                                                    $name = pathinfo($fname, PATHINFO_FILENAME);
-                                                    $sql = $mysqli->prepare('INSERT INTO `file_list`(`package_id`, `fname`) VALUES(?, ?);');
-                                                    $sql->bind_param('is', $package_id, $name);
-                                                    $sql->execute();
-                                                }
+                                                $sql = $mysqli->prepare('INSERT INTO `file_list`(`package_id`, `fname`) VALUES(?, ?);');
+                                                $sql->bind_param('is', $package_id, $fname);
+                                                $sql->execute();
                                             }
                                             
                                             if (isset($_POST["depends"])) {
@@ -193,6 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             
                                             $response_json = json_encode($response);
                                             
+                                            db_log(17, true, $userid, $ip, $_SESSION["token"], "Package $package_id uploaded successfully!", $mysqli);
                                             $mysqli->close();
                                             die($response_json);
                                         }
@@ -203,6 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         
                                         $response_json = json_encode($response);
                                         
+                                        db_log(17, false, $userid, $ip, $_SESSION["token"], "Database error: $e!", $mysqli);
                                         $mysqli->close();
                                         die($response_json);
                                     } else {
@@ -211,6 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         
                                         $response_json = json_encode($response);
                                         
+                                        db_log(17, false, $userid, $ip, $_SESSION["token"], "Unable to move file to target!", $mysqli);
                                         $mysqli->close();
                                         die($response_json);
                                     }
@@ -221,6 +234,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     
                                     $response_json = json_encode($response);
 
+                                    db_log(17, false, $userid, $ip, $_SESSION["token"], "Files from another package included!", $mysqli);
+                                    $mysqli->close();
                                     die($response_json);
                                 }
                             } else {
@@ -229,6 +244,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 
                                 $response_json = json_encode($response);
                                 
+                                db_log(17, false, $userid, $ip, $_SESSION["token"], "Max file size exceeded!", $mysqli);
+                                $mysqli->close();
                                 die($response_json);
                             }
                         } else {
@@ -237,6 +254,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             $response_json = json_encode($response);
                             
+                            db_log(17, false, $userid, $ip, $_SESSION["token"], "Unable to upload file!", $mysqli);
+                            $mysqli->close();
                             die($response_json);
                         }
                     } else {
@@ -245,14 +264,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         $response_json = json_encode($response);
                         
+                        db_log(17, false, $userid, $ip, $_SESSION["token"], "Target path is not valid!", $mysqli);
+                        $mysqli->close();
                         die($response_json);
                     }
                 } else {
                     $response->code = -1;
-                    $response->message = "Not all parameter set!";
+                    $response->message = "Not all parameters set!";
                     
                     $response_json = json_encode($response);
                     
+                    db_log(17, false, $userid, $ip, $_SESSION["token"], "Not all parameters set!", $mysqli);
+                    $mysqli->close();
                     die($response_json);
                 }
             } else {
@@ -261,6 +284,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 $response_json = json_encode($response);
                 
+                db_log(17, false, $userid, $ip, $_SESSION["token"], "File is not zip!", $mysqli);
+                $mysqli->close();
                 die($response_json);
             }
         } else {
@@ -269,6 +294,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $response_json = json_encode($response);
             
+            db_log(17, false, $userid, $ip, $_SESSION["token"], "Not enough privileges to upload!", $mysqli);
+            $mysqli->close();
             die($response_json);
         }
     } else {

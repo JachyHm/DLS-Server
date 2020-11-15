@@ -66,7 +66,7 @@ try {
                     if ($package_id>0) {
                         $sql = $mysqli->prepare('INSERT INTO `file_list` (`package_id`, `fname`) VALUES (?, ?);');
                         foreach ($files as $file_name) {
-                            $sql->bind_param('is', $package_id, $file_name);
+                            $sql->bind_param('is', $package_id, str_replace('\\', '/', $file_name));
                             $sql->execute();
                         }
                     }
@@ -94,7 +94,7 @@ try {
                     if ($package_id>0) {
                         $sql = $mysqli->prepare('INSERT INTO `file_list` (`package_id`, `fname`) VALUES (?, ?);');
                         foreach ($files as $file_name) {
-                            $sql->bind_param('is', $package_id, $file_name);
+                            $sql->bind_param('is', $package_id, str_replace('\\', '/', $file_name));
                             $sql->execute();
                         }
                     }

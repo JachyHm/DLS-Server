@@ -25,6 +25,7 @@ if (isset($_POST["t"]) && isset($_POST["password"])) {
             
                 $response_json = json_encode($response);
             
+                db_log(13, false, -1, $ip, $_POST["t"], "Password reset token invalid!", $mysqli);
                 $mysqli->close();
                 die($response_json);
             }
@@ -34,6 +35,7 @@ if (isset($_POST["t"]) && isset($_POST["password"])) {
             
                 $response_json = json_encode($response);
             
+                db_log(13, false, -1, $ip, $_POST["t"], "Password is empty!", $mysqli);
                 $mysqli->close();
                 die($response_json);
             }
@@ -53,6 +55,7 @@ if (isset($_POST["t"]) && isset($_POST["password"])) {
                     $sql = $mysqli->prepare('DELETE FROM `pwd_resets` WHERE `token` = ?;');
                     $sql->bind_param('s', $_POST["t"]);
                     $sql->execute();
+                    db_log(13, true, $row["id"], $ip, $_POST["t"], "Password changed!", $mysqli);
                 }
             }
                     
@@ -69,6 +72,7 @@ if (isset($_POST["t"]) && isset($_POST["password"])) {
     
             $response_json = json_encode($response);
     
+            db_log(13, false, $ip, $_POST["t"], "ReCaptcha failed!", $mysqli);
             $mysqli->close();
             die($response_json);
         }
