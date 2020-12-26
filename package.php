@@ -215,7 +215,7 @@ if (!empty($queryResult)) {
 </script>
 <div class="container">
     <div class="card-body">
-        <p><h1><?php echo($package_name);?></h1></p>
+        <p><h1><?php echo($package_name);?> - <a href="dls:<?php echo($package_id);?>">DOWNLOAD</a></h1></p>
         <p><?php echo($package_desc)?></p>
 
         <?php 

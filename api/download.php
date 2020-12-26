@@ -19,8 +19,8 @@ function flushResponse($code, $message, $body, $mysqli)
     die($response_json);
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST["token"]) && isset($_POST["package_id"])) {
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    if (isset($_GET["token"]) && isset($_GET["package_id"])) {
         if (!empty($_SERVER['HTTP_CLIENT_IP'])) { //check ip from share internet
             $ip=$_SERVER['HTTP_CLIENT_IP'];
         } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { //to check ip is pass from proxy
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ip=$_SERVER['REMOTE_ADDR'];
         }
 
-        $token = $_POST["token"];
+        $token = $_GET["token"];
 
         $sql = $mysqli->prepare('SELECT * FROM `tokens` WHERE `token` = ?;');
         $sql->bind_param('i', $token);
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($queryResult)) {
             if ($queryResult->num_rows > 0) {
                 $userid = $queryResult->fetch_assoc()["user_id"];
-                $package_id = $_POST["package_id"];
+                $package_id = $_GET["package_id"];
                 $sql = $mysqli->prepare('SELECT `file_name` FROM `package_list` WHERE `id` = ?;');
                 $sql->bind_param('i', $package_id);
                 $sql->execute();
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         header('Content-Encoding: zip');
                         header('Content-Transfer-Encoding: binary');
                         header('Expires: 0');
-                        header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+                        header('Cache-Control: must-revalidate, GET-check=0, pre-check=0');
                         header('Pragma: public');
                         header('Content-Length: '.filesize($fname));
                         readfile($fname);

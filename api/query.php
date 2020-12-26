@@ -167,11 +167,13 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
             $package->category = $row["category"];
             $package->era = $row["era"];
             $package->country = $row["country"];
-            $package->paid = $row["paid"];
-            $package->steamappid = $row["steamappid"];
             $package->version = $row["version"];
             $package->owner = $row["owner"];
             $package->created = $row["datetime"];
+            $package->description = $row["description"];
+            $package->target_path = $row["target_path"];
+            $package->paid = $row["paid"];
+            $package->steamappid = $row["steamappid"];
             $package->files = array();
             $package->dependencies = array();
 
@@ -427,6 +429,30 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
     } else {
         flushResponse(-1, "Nothing to search for!", new stdClass(), $mysqli);
     }
+} else if (isset($_GET["getVersions"]) || isset($_POST["getVersions"])) {
+    if (isset($_GET["getVersions"])) {
+        $packages_string = trim(urldecode($_GET["getVersions"]));
+    } else {
+        $packages_string = trim(urldecode($_POST["getVersions"]));
+    }
+    $packages = explode(",", $packages_string);
+
+    $result = array();
+    foreach ($packages as $package) {
+        $sql = $mysqli->prepare('SELECT `version` FROM `package_list` WHERE `id` = ?;');
+        $sql->bind_param("i", $package);
+        if ($sql->execute()) {
+            $queryResult = $sql->get_result();
+        
+            if (!empty($queryResult)) {
+                if ($queryResult->num_rows > 0) {
+                    $row = $queryResult->fetch_assoc();
+                    $result[$package] = $row["version"];
+                }
+            }
+        }
+    }
+    flushResponse(1, "Success!", $result, $mysqli);
 }
 flushResponse(-1, "Bad request!", new stdClass(), $mysqli);
 

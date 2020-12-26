@@ -65,12 +65,12 @@ session_start();
                                     }
                                 } else {
                                     user.logged = true;
-                                    user.name = data.realname;
-                                    user.email = data.email;
-                                    user.id = data.userid;
-                                    user.privileges = data.privileges;
+                                    user.name = data.content.realname;
+                                    user.email = data.content.email;
+                                    user.id = data.content.userid;
+                                    user.privileges = data.content.privileges;
                                     $("#login").modal('hide');
-                                    $("#logged-button").html('Logged in: <b>'+data.realname+'</b>');
+                                    $("#logged-button").html('Logged in: <b>'+data.content.realname+'</b>');
                                     $("#login-button").hide();
                                     $("#register-button").hide();
                                     $('#logged-button').show();
@@ -84,8 +84,8 @@ session_start();
                                     } else {
                                         $('#admin-button').hide();
                                     }
-                                    $('#profile-name').val(data.realname);
-                                    $('#profile-email').val(data.email);
+                                    $('#profile-name').val(data.content.realname);
+                                    $('#profile-email').val(data.content.email);
                                     $('#profile-password').val('');
                                 }
                             }
