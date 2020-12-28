@@ -16,9 +16,10 @@ $filename = "";
 $version = "";
 $datetime = "";
 $target_path = "";
+$paid = "";
 $steamappid = "";
 
-$sql = $mysqli->prepare('SELECT `package_list`.`id`, `file_name`, `display_name`, `version`, `owner`, `datetime`, `description`, `target_path`, `steamappid`, `users`.`nickname` AS `author`, `package_list`.`category` AS `category_id`, `categories`.`text` AS `category`, `era` AS `era_id`, `eras`.`text` AS `era`, `package_list`.`country` AS `country_id`, `countries`.`text` AS `country` FROM `package_list` LEFT JOIN `users` ON `package_list`.`owner` = `users`.`id` LEFT JOIN `categories` ON `package_list`.`category` = `categories`.`id` LEFT JOIN `eras` ON `package_list`.`era` = `eras`.`id` LEFT JOIN `countries` ON `package_list`.`country` = `countries`.`id` WHERE `package_list`.`id` = ?;');
+$sql = $mysqli->prepare('SELECT `package_list`.`id`, `file_name`, `display_name`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`, `users`.`nickname` AS `author`, `package_list`.`category` AS `category_id`, `categories`.`text` AS `category`, `era` AS `era_id`, `eras`.`text` AS `era`, `package_list`.`country` AS `country_id`, `countries`.`text` AS `country` FROM `package_list` LEFT JOIN `users` ON `package_list`.`owner` = `users`.`id` LEFT JOIN `categories` ON `package_list`.`category` = `categories`.`id` LEFT JOIN `eras` ON `package_list`.`era` = `eras`.`id` LEFT JOIN `countries` ON `package_list`.`country` = `countries`.`id` WHERE `package_list`.`id` = ?;');
 $sql->bind_param('i', $package_id);
 $sql->execute();
 $queryResult = $sql->get_result();
@@ -41,6 +42,7 @@ if (!empty($queryResult)) {
         $version = $row["version"];
         $datetime = $row["datetime"];
         $target_path = $row["target_path"];
+        $paid = $row["paid"];
         $steamappid = $row["steamappid"];
     } else {
         $_SESSION["errorMessage"] = "No such package!";
@@ -215,12 +217,18 @@ if (!empty($queryResult)) {
 </script>
 <div class="container">
     <div class="card-body">
-        <p><h1><?php echo($package_name);?> - <a href="dls:<?php echo($package_id);?>">DOWNLOAD</a></h1></p>
+        <p><h1><?php echo($package_name);?></h1></p>
+        <?php
+        if (!$paid) {
+            ?>
+            <a href="dls:<?php echo($package_id);?>"><button class="btn btn-success" style="margin: 5px">DOWNLOAD</button></a>
+            <?php
+        }
+        ?>
         <p><?php echo($package_desc)?></p>
-
         <?php 
         if (isset($_SESSION["logged"]) && $_SESSION["logged"] && (($author_id == $_SESSION["userid"] && $_SESSION["privileges"] > 0) || $_SESSION["privileges"] > 1)) {
-            echo('<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#editPackage">Edit package</button><button type="button" class="btn btn-primary" data-toggle="modal" data-target="#dependenciesModal">Edit dependencies</button>');
+            echo('<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#editPackage" style="margin: 5px">Edit package</button><button type="button" class="btn btn-primary" data-toggle="modal" data-target="#dependenciesModal" style="margin: 5px">Edit dependencies</button>');
         }
         ?>
     </div>

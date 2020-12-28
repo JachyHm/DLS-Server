@@ -2,6 +2,14 @@
 require "../dls_db.php";
 session_start();
 if (isset($_GET["t"])) {
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) { //check ip from share internet
+        $ip=$_SERVER['HTTP_CLIENT_IP'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { //to check ip is pass from proxy
+        $ip=$_SERVER['HTTP_X_FORWARDED_FOR'];
+    } else {
+        $ip=$_SERVER['REMOTE_ADDR'];
+    }
+
     $sql = $mysqli->prepare('SELECT * FROM `users` WHERE `token` = ?;');
     $sql->bind_param('s', $_GET["t"]);
     $sql->execute();
@@ -14,22 +22,23 @@ if (isset($_GET["t"])) {
                 $sql = $mysqli->prepare('UPDATE `users` SET `valid_email` = 1 WHERE `token` = ?;');
                 $sql->bind_param('s', $_GET["t"]);
                 if ($sql->execute()) {
-                    $mysqli->close();
                     $_SESSION["successMessage"] = "Email was verified successfully.";
                     db_log(14, true, $row["id"], $ip, $_GET["t"], "Email verified successfully!", $mysqli);
+                    $mysqli->close();
                     header("Location: ../");
                     die();
                 }
             } else {
-                $mysqli->close();
                 $_SESSION["errorMessage"] = "Email was already verified.";
                 db_log(14, false, $row["id"], $ip, $_GET["t"], "Email was already verified!", $mysqli);
+                $mysqli->close();
                 header("Location: ../");
                 die();
             }
         }
     }
     db_log(14, false, -1, $ip, $_GET["t"], "Invalid token!", $mysqli);
+    $mysqli->close();
 }
 $_SESSION["errorMessage"] = "Invalid token!";
 header("Location: ../");

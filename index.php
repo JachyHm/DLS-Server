@@ -340,11 +340,14 @@ session_start();
                 <li class="nav-item" id="register-button">
                     <a class="nav-link" href="#" data-toggle="modal" data-target="#register">Register</a>
                 </li>
+                <li class="nav-item" id="application-button">
+                    <a class="nav-link" href="?application">Desktop application</a>
+                </li>
                 <li class="nav-item" id="packages-button">
                     <a class="nav-link" href="?manager">Upload package</a>
                 </li>
                 <li class="nav-item" id="admin-button">
-                    <a class="nav-link" href="#">Administration</a>
+                    <a class="nav-link" href="?admin">Administration</a>
                 </li>
             </ul>
             <ul class="navbar-nav" style="margin-left: 40px">
@@ -552,9 +555,13 @@ session_start();
         } else if (isset($_GET["author"])) {
             $author_id = $_GET["author"];
             include "author.php";
+        } else if (isset($_GET["application"])) {
+            include "application.php";
         } else if (isset($_GET["manager"])) {
-            $author_id = $_GET["manager"];
             include "manager.php";
+        } else if (isset($_GET["admin"])) {
+            $author_id = $_GET["admin"];
+            include "admin.php";
         } else {
             include "packages_list.php";
         }

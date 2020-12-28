@@ -109,8 +109,9 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
                         $response->message = "Registered successfully!";
                     
                         $response_json = json_encode($response);
+                        $user_id = $sql->insert_id;
                     
-                        db_log(12, true, -1, $ip, $email, "User registered successfully!", $mysqli);
+                        db_log(12, true, $user_id, $ip, $email, "User registered successfully!", $mysqli);
                         $mysqli->close();
                         die($response_json);
                     } else {
