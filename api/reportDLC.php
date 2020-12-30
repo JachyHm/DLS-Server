@@ -32,9 +32,8 @@ $errors = array();
 
 try {
     foreach ($decodedContent as $dlc) {
+        $id = $dlc->DLCAppId;
         if (count($dlc->IncludedFiles)) {
-            $id = $dlc->DLCAppId;
-
             $sql = $mysqli->prepare('SELECT `steamappid` FROM `package_list` WHERE `steamappid` = ?;');
             $sql->bind_param('i', $id);
             $sql->execute();
@@ -66,7 +65,8 @@ try {
                     if ($package_id>0) {
                         $sql = $mysqli->prepare('INSERT INTO `file_list` (`package_id`, `fname`) VALUES (?, ?);');
                         foreach ($files as $file_name) {
-                            $sql->bind_param('is', $package_id, str_replace('\\', '/', $file_name));
+                            $_file_name = str_replace('\\', '/', $file_name);
+                            $sql->bind_param('is', $package_id, $_file_name);
                             $sql->execute();
                         }
                     }

@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $token = $_GET["token"];
 
         $sql = $mysqli->prepare('SELECT * FROM `tokens` WHERE `token` = ?;');
-        $sql->bind_param('i', $token);
+        $sql->bind_param('s', $token);
         $sql->execute();
 
         $queryResult = $sql->get_result();

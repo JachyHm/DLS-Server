@@ -31,6 +31,7 @@ if (!empty($queryResult)) {
     <h3>Download section</h3>
     <p>Last version: <b><?php echo("$version_code </b>from $date_published");?><br>
     Version info: <?php echo($comment);?></p>
-    <p><a href="<?php echo($filepath); ?>"><button type="button" class="btn btn-success">DOWNLOAD (Windows)</button></a></p>
+    <p><a href="<?php echo($filepath); ?>"><button type="button" class="btn btn-success">DOWNLOAD (Windows)</button></a>
+    <a href="https://github.com/Zdendaki/RailworksDownloader"><button type="button" class="btn btn-success">SOURCE CODE (GitHub)</button></a></p>
     <p>Any other help with this application will be provided soon.</p>
 </div>
