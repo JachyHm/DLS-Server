@@ -18,8 +18,9 @@ $datetime = "";
 $target_path = "";
 $paid = "";
 $steamappid = "";
+$steam_dev = "";
 
-$sql = $mysqli->prepare('SELECT `package_list`.`id`, `file_name`, `display_name`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`, `users`.`nickname` AS `author`, `package_list`.`category` AS `category_id`, `categories`.`text` AS `category`, `era` AS `era_id`, `eras`.`text` AS `era`, `package_list`.`country` AS `country_id`, `countries`.`text` AS `country` FROM `package_list` LEFT JOIN `users` ON `package_list`.`owner` = `users`.`id` LEFT JOIN `categories` ON `package_list`.`category` = `categories`.`id` LEFT JOIN `eras` ON `package_list`.`era` = `eras`.`id` LEFT JOIN `countries` ON `package_list`.`country` = `countries`.`id` WHERE `package_list`.`id` = ?;');
+$sql = $mysqli->prepare('SELECT `package_list`.`id`, `file_name`, `display_name`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`, `steam_dev`, `users`.`nickname` AS `author`, `package_list`.`category` AS `category_id`, `categories`.`text` AS `category`, `era` AS `era_id`, `eras`.`text` AS `era`, `package_list`.`country` AS `country_id`, `countries`.`text` AS `country` FROM `package_list` LEFT JOIN `users` ON `package_list`.`owner` = `users`.`id` LEFT JOIN `categories` ON `package_list`.`category` = `categories`.`id` LEFT JOIN `eras` ON `package_list`.`era` = `eras`.`id` LEFT JOIN `countries` ON `package_list`.`country` = `countries`.`id` WHERE `package_list`.`id` = ?;');
 $sql->bind_param('i', $package_id);
 $sql->execute();
 $queryResult = $sql->get_result();
@@ -44,6 +45,7 @@ if (!empty($queryResult)) {
         $target_path = $row["target_path"];
         $paid = $row["paid"];
         $steamappid = $row["steamappid"];
+        $steam_dev = $row["steam_dev"];
     } else {
         $_SESSION["errorMessage"] = "No such package!";
         echo("<script> window.location.replace('.') </script>");
@@ -243,7 +245,15 @@ if (!empty($queryResult)) {
                 </tr>
                 <tr>
                     <th scope="row">Author:</th>
-                    <td><?php echo("<a href='?author=$author_id'>$author</a>")?></td>
+                    <td>
+                    <?php 
+                    if ($paid) {
+                        echo("$steam_dev");
+                    } else {
+                        echo("<a href='?author=$author_id'>$author</a>");
+                    }
+                    ?>
+                    </td>
                 </tr>
                 <tr>
                     <th scope="row">Category:</th>

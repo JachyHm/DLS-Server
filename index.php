@@ -6,6 +6,11 @@ session_start();
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="RailWorks download station" />
+    <meta property="og:description" content="Welcome to RailWorks download station!" />
+    <meta property="og:url" content="https://dls.rw.jachyhm.cz" />
+    <meta property="og:image" content="https://dls.rw.jachyhm.cz/android-chrome-512x512.png" />
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
         integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">

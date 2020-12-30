@@ -58,7 +58,7 @@ try {
 
                     $files = $dlc->IncludedFiles;
 
-                    $sql = $mysqli->prepare('INSERT INTO `package_list` (`file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`) VALUES (?, ?, 8, -1, -1, -1, -1, ?, ?, "", 1, ?) ON DUPLICATE KEY UPDATE `id` = `id`;');
+                    $sql = $mysqli->prepare('INSERT INTO `package_list` (`file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`, `steam_dev`) VALUES (?, ?, 8, -1, -1, -1, -2, ?, ?, "", 1, ?, "Unknown") ON DUPLICATE KEY UPDATE `id` = `id`;');
                     $sql->bind_param('ssssi', $store_page, $display_name, $release_date, $description, $id);
                     $sql->execute();
 
@@ -77,6 +77,12 @@ try {
                     }
                     $display_name = $data->name ?? "Unknown DLC placeholder";
                     $description = $data->short_description ?? "What you see is placeholder for unlisted DLC. Please do not edit, nor delete this package. These are usually packages which are already part of game, or another DLC, but are also important for DLS functioning.";
+                    $steam_dev = "Unknown";
+                    try {
+                        $steam_dev = $data->developers[0];
+                    } catch (Exception $e) {
+                    }
+                    $steam_dev_link = "<a href='https://store.steampowered.com/search/?developer=$steam_dev'>$steam_dev</a>";
                     $date_obj = DateTime::createFromFormat("j M, Y", $data->release_date->date);
                     if ($date_obj) {
                         $release_date = $date_obj->format('Y-m-d');
@@ -86,8 +92,8 @@ try {
             
                     $files = $dlc->IncludedFiles;
             
-                    $sql = $mysqli->prepare('INSERT INTO `package_list` (`file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`) VALUES (?, ?, 8, -1, -1, -1, -1, ?, ?, "", 1, ?) ON DUPLICATE KEY UPDATE `id` = `id`;');
-                    $sql->bind_param('ssssi', $store_page, $display_name, $release_date, $description, $id);
+                    $sql = $mysqli->prepare('INSERT INTO `package_list` (`file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`, `steam_dev`) VALUES (?, ?, 8, -1, -1, -1, -2, ?, ?, "", 1, ?, ?) ON DUPLICATE KEY UPDATE `id` = `id`;');
+                    $sql->bind_param('ssssi', $store_page, $display_name, $release_date, $description, $id, $steam_dev_link);
                     $sql->execute();
             
                     $package_id = $mysqli->insert_id;
