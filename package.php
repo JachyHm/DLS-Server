@@ -230,7 +230,7 @@ if (!empty($queryResult)) {
         <p><?php echo($package_desc)?></p>
         <?php 
         if (isset($_SESSION["logged"]) && $_SESSION["logged"] && (($author_id == $_SESSION["userid"] && $_SESSION["privileges"] > 0) || $_SESSION["privileges"] > 1)) {
-            echo('<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#editPackage" style="margin: 5px">Edit package</button><button type="button" class="btn btn-primary" data-toggle="modal" data-target="#dependenciesModal" style="margin: 5px">Edit dependencies</button>');
+            echo("<button type='button' class='btn btn-primary' data-toggle='modal' data-target='#editPackage' style='margin: 5px'>Edit package</button><button type='button' class='btn btn-primary' data-toggle='modal' data-target='#dependenciesModal' style='margin: 5px'>Edit dependencies</button><a href=\"/api/update?package_id=$package_id&refreshDLC\"><button type='button' class='btn btn-primary' style='margin: 5px'>Refresh Steam DLC</button></a>");
         }
         ?>
     </div>
@@ -287,7 +287,7 @@ if (!empty($queryResult)) {
         </table>
         </div>
         <?php
-        if (file_exists("files/images/$package_id.png") || ($steamappid != 0 && $package_name != "Unknown DLC placeholder")) {
+        if (file_exists("files/images/$package_id.png") || ($steamappid != 0)) {// && $package_name != "Unknown DLC placeholder")) {
             if (file_exists("files/images/$package_id.png")) {
                 $image = "files/images/$package_id.png";
             } else {
@@ -295,7 +295,7 @@ if (!empty($queryResult)) {
             }
             ?>
             <div class="col-md-6">
-                <img src=<?php echo($image); ?> width="770" class="img-fluid"></img>
+                <img src=<?php echo($image); ?> onerror="this.style.opacity='0'" width="770" class="img-fluid"></img>
             </div>
             <?php
         }
@@ -450,7 +450,7 @@ if (isset($_SESSION["logged"]) && $_SESSION["logged"] && ($author_id == $_SESSIO
                                 <div class="input-group-prepend">
                                     <div class="input-group-text">Assets/</div>
                                 </div>
-                                <input type="text" class="form-control" id="targetPath" name="target_path" value="<?php echo($target_path);?>" required>
+                                <input type="text" class="form-control" id="targetPath" name="target_path" value="<?php echo($target_path);?>" <?php if (!$paid) {?>required<?php }?>>
                             </div>
                         </div>
                         <div class="form-group">
@@ -464,7 +464,7 @@ if (isset($_SESSION["logged"]) && $_SESSION["logged"] && ($author_id == $_SESSIO
                                 <label for="owner">Owner</label>
                                 <select class="form-control" id="owner" name="owner" required>
                                     <?php
-                                    $sql = $mysqli->prepare('SELECT `id`, `nickname` FROM `users` WHERE `valid_email` = 1 AND `activated` = 1 ORDER BY `nickname`;');
+                                    $sql = $mysqli->prepare('SELECT `id`, `nickname` FROM `users` WHERE `privileges` > 0 ORDER BY `nickname`;');
                                     $sql->bind_param('i', $package_id);
                                     $sql->execute();
                                     $queryResult = $sql->get_result();

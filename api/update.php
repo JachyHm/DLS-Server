@@ -3,8 +3,34 @@ session_start();
 
 require "../dls_db.php";
 
+function getResponse($url, &$response = null)
+{
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_PROXY, "127.0.0.1:9050");
+    curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5_HOSTNAME);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
+    $response = curl_exec($ch);
+    $response_code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+
+    return $response_code;
+}
+
+function raiseError($message) {
+    $_SESSION["errorMessage"] = $message;
+    if (isset($_POST["package_id"])) {
+        header("Location: ../?package=".$_POST["package_id"]);
+    } else {
+        header("Location: ../");
+    }
+    die();
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_SESSION["logged"]) && $_SESSION["logged"] && isset($_SESSION["userid"])) {
+    if (isset($_SESSION["logged"]) && $_SESSION["logged"] && isset($_SESSION["userid"]) && isset($_SESSION["privileges"]) && $_SESSION["privileges"] > 0) {
         if (!empty($_SERVER['HTTP_CLIENT_IP'])) { //check ip from share internet
             $ip=$_SERVER['HTTP_CLIENT_IP'];
         } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { //to check ip is pass from proxy
@@ -61,9 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             db_log(16, false, $userid, $ip, $_SESSION["token"], "Package not updated $package_id!", $mysqli);
-            $_SESSION["errorMessage"] = "Unable to update!";
-            header("Location: ../?package=".$package_id);
-            die();
+            raiseError("Unable to update!");
         } else if (isset($_POST["package_id"]) && isset($_POST["depends"])) {
             $package_id = $_POST["package_id"];
 
@@ -77,9 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$sql->execute()) {
                     db_log(16, false, $userid, $ip, $_SESSION["token"], "Updating package $package_id dependencies failed!", $mysqli);
 
-                    $_SESSION["errorMessage"] = "Unable to update!";
-                    header("Location: ../?package=".$_POST["package_id"]);
-                    die();
+                    raiseError("Unable to update!");
                 }
             }
 
@@ -87,23 +109,119 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION["successMessage"] = "Package dependencies successfully updated!";
             header("Location: ../?package=".$_POST["package_id"]);
             die();
-        } else {
-            $_SESSION["errorMessage"] = "Missing required parameters!";
-            if (isset($_POST["package_id"])) {
-                header("Location: ../?package=".$_POST["package_id"]);
-            } else {
-                header("Location: ../");
+        } else if (isset($_POST["package_id"]) && isset($_POST["refreshDLC"])) {
+            $package_id = $_POST["package_id"];
+            $steamappid = $_POST["refreshDLC"];
+            
+            $response = null;
+            $url = "http://store.steampowered.com/api/appdetails/?appids=$steamappid";
+            $response_code = getResponse($url, $response);
+
+            if ($response_code == 200) {
+                $success = false;
+                if ($response) {
+                    $decoded_resp = json_decode($response)->$steamappid;
+
+                    $success = $decoded_resp->success;
+                }
+                if ($success) {
+                    $data = $decoded_resp->data;
+                    if (isset($data->fullgame) && !$data->fullgame->appid == 24010) {
+                        raiseError("$steamappid isn't Train Simulator DLC!");
+                    }
+                    $display_name = $data->name ?? "Unknown DLC placeholder";
+                    $description = $data->short_description ?? "What you see is placeholder for unlisted DLC. Please do not edit, nor delete this package. These are usually packages which are already part of game, or another DLC, but are also important for DLS functioning.";
+                    $steam_dev = "Unknown";
+                    try {
+                        $steam_dev = $data->developers[0];
+                    } catch (Exception $e) {
+                    }
+                    $steam_dev_link = "<a href='https://store.steampowered.com/search/?developer=$steam_dev'>$steam_dev</a>";
+                    $date_obj = DateTime::createFromFormat("j M, Y", $data->release_date->date);
+                    if ($date_obj) {
+                        $release_date = $date_obj->format('Y-m-d');
+                    } else {
+                        $release_date = "1970-01-01";
+                    }
+
+                    $sql = $mysqli->prepare('UPDATE `package_list` SET `display_name` = ?, `category` = 8, `era` = -1, `country` = -1, `version` = -1, `owner` = -2, `datetime` = ?, `description` = ?, `target_path` = "", `paid` = 1, `steamappid` = ?, `steam_dev` = ? WHERE `id` = ?;');
+                    $sql->bind_param('sssisi', $display_name, $release_date, $description, $steamappid, $steam_dev_link, $package_id);
+                    $sql->execute();
+                    
+                    $_SESSION["successMessage"] = "Package successfully updated!";
+                    header("Location: ../?package=".$package_id);
+                    die();
+                }
+                raiseError("$steamappid isn't Train Simulator DLC!");
             }
-            die();
+        } else {
+            raiseError("Missing required parameters!");
         }
     } else {
-        $_SESSION["errorMessage"] = "Only logged users can change packages!";
-        if (isset($_POST["package_id"])) {
-            header("Location: ../?package=".$_POST["package_id"]);
+        raiseError("Only logged users can change packages!");
+    }
+} else if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    if (isset($_SESSION["logged"]) && $_SESSION["logged"] && isset($_SESSION["userid"]) && isset($_SESSION["privileges"]) && $_SESSION["privileges"] > 0) {
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) { //check ip from share internet
+            $ip=$_SERVER['HTTP_CLIENT_IP'];
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { //to check ip is pass from proxy
+            $ip=$_SERVER['HTTP_X_FORWARDED_FOR'];
         } else {
-            header("Location: ../");
+            $ip=$_SERVER['REMOTE_ADDR'];
         }
-        die();
+
+        $userid = $_SESSION["userid"];
+        if (isset($_GET["package_id"]) && isset($_GET["refreshDLC"])) {
+            $package_id = $_GET["package_id"];
+            $steamappid = $_GET["refreshDLC"];
+            
+            $response = null;
+            $url = "http://store.steampowered.com/api/appdetails/?appids=$steamappid";
+            $response_code = getResponse($url, $response);
+
+            if ($response_code == 200) {
+                $success = false;
+                if ($response) {
+                    $decoded_resp = json_decode($response)->$steamappid;
+
+                    $success = $decoded_resp->success;
+                }
+                if ($success) {
+                    $data = $decoded_resp->data;
+                    if (isset($data->fullgame) && !$data->fullgame->appid == 24010) {
+                        raiseError("$steamappid isn't Train Simulator DLC!");
+                    }
+                    $display_name = $data->name ?? "Unknown DLC placeholder";
+                    $description = $data->short_description ?? "What you see is placeholder for unlisted DLC. Please do not edit, nor delete this package. These are usually packages which are already part of game, or another DLC, but are also important for DLS functioning.";
+                    $steam_dev = "Unknown";
+                    try {
+                        $steam_dev = $data->developers[0];
+                    } catch (Exception $e) {
+                    }
+                    $steam_dev_link = "<a href='https://store.steampowered.com/search/?developer=$steam_dev'>$steam_dev</a>";
+                    $date_obj = DateTime::createFromFormat("j M, Y", $data->release_date->date);
+                    if ($date_obj) {
+                        $release_date = $date_obj->format('Y-m-d');
+                    } else {
+                        $release_date = "1970-01-01";
+                    }
+
+                    $sql = $mysqli->prepare('UPDATE `package_list` SET `display_name` = ?, `category` = 8, `era` = -1, `country` = -1, `version` = -1, `owner` = -2, `datetime` = ?, `description` = ?, `target_path` = "", `paid` = 1, `steamappid` = ?, `steam_dev` = ? WHERE `id` = ?;');
+                    $sql->bind_param('sssisi', $display_name, $release_date, $description, $steamappid, $steam_dev_link, $package_id);
+                    $sql->execute();
+
+                    $_SESSION["successMessage"] = "Package successfully updated!";
+                    header("Location: ../?package=".$package_id);
+                    die();
+                }
+                raiseError("$steamappid isn't Train Simulator DLC!");
+            }
+            raiseError("Refreshing Steam DLC failed!");
+        } else {
+            raiseError("Missing required parameters!");
+        }
+    } else {
+        raiseError("Only logged users can change packages!");
     }
 } else {
     header('Content-type: application/json');
