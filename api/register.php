@@ -35,8 +35,9 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
                 if ($_SESSION["logged"] && $_SESSION["email"] == $email) {
                     $message = "";
                     if (!empty($password)) {
+                        $pwd_hash = password_hash($password, PASSWORD_DEFAULT);
                         $sql = $mysqli->prepare('UPDATE `users` SET `password`=? WHERE `email`=?;');
-                        $sql->bind_param('ss', password_hash($password, PASSWORD_DEFAULT), $email);
+                        $sql->bind_param('ss', $pwd_hash, $email);
                         $res = $sql->execute();
                         if (!$res) {
                             $response->code = -1;

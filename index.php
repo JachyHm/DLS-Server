@@ -81,8 +81,10 @@ session_start();
                                     $('#logged-button').show();
                                     if (user.privileges > 0) {
                                         $('#packages-button').show();
+                                        $('#become-author-button').hide();
                                     } else {
                                         $('#packages-button').hide();
+                                        $('#become-author-button').show();
                                     }
                                     if (user.privileges > 1) {
                                         $('#admin-button').show();
@@ -170,6 +172,69 @@ session_start();
                     });
                 });
             });
+            $(".become-author-form").submit(function(e) {
+                e.preventDefault();
+                if (user.logged && user.privileges == 0) {
+                    grecaptcha.ready(function() {
+                        grecaptcha.execute('6LcDPNkZAAAAALoiQBUiOI5vWpSRZFWG1HciV3BT', {action: 'claim_author'}).then(function(token) {
+                            var form = document.forms.namedItem("become-author");
+                            var url = "api/becomeAuthor";
+
+                            var reqData = new FormData(form);
+                            reqData.append("recaptcha_token", token);
+                            reqData.append("userid", user.id);
+
+                            var req = new XMLHttpRequest();
+                            req.responseType = 'json';
+                            req.onloadstart = function(){
+                                $('#custom-file-progress-bar').css('width', '0%').attr('aria-valuenow', 0).html();
+                                return true;
+                            };
+
+                            req.upload.onprogress = function(event) {
+                                var percentComplete = (event.loaded/event.total)*100;
+                                $('#custom-file-progress-bar').css('width', percentComplete+'%').attr('aria-valuenow', percentComplete).html(percentComplete.toFixed(2)+'%');
+                            }
+                                
+                            req.onload = function(oEvent) {
+                                if (req.status == 200) {
+                                    var data = req.response;
+                                    $('#custom-file-progress-bar').css('width', '0%').attr('aria-valuenow', 0).html();
+                                    if (data.code < 0) {
+                                        $("#error-content").html(data.message);
+                                        $("#error").modal("show");
+                                        clearTimeout(errorTimeout);
+                                        errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);
+                                    } else {
+                                        $("#become-author").modal("hide");
+                                        $("#info-content").html(data.message);
+                                        $("#info").modal("show");
+                                        clearTimeout(infoTimeout);
+                                        infoTimeout = setTimeout(function(){$("#info").modal("hide");}, 5000);
+                                    }
+                                } else {
+                                    $("#error-content").html("Error "+req.status);
+                                    $("#error").modal("show");
+                                    clearTimeout(errorTimeout);
+                                    errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);
+                                }
+                            };
+
+                            req.open("POST", url, true);
+                            req.send(reqData);
+                        });
+                    });
+                } else {
+                    if (user.logged) {
+                        $("#error-content").html("You already are author!");
+                    } else {
+                        $("#error-content").html("You need to be logged in if you want to send this form!");
+                    }
+                    $("#error").modal("show");
+                    clearTimeout(errorTimeout);
+                    errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);
+                }
+            });
             $(".pwdReset-form").submit(function(e) {
                 e.preventDefault();
 
@@ -226,17 +291,17 @@ session_start();
             $_SESSION["successMessage"] = null;
             $_SESSION["errorMessage"] = null;
             if (isset($_SESSION["logged"]) && $_SESSION["logged"]) {
-                echo("$('#login-button').hide();$('#register-button').hide();");
+                echo("$('#login-button').hide();$('#register-button').hide();$('#become-author-button').show();");
                 echo("$('#profile-name').val('".$_SESSION["realname"]."');");
                 echo("$('#profile-email').val('".$_SESSION["email"]."');");
                 echo("$('#profile-password').val('');");
             } else {
-                echo("$('#logged-button').hide();$('#packages-button').hide();$('#admin-button').hide();");
+                echo("$('#logged-button').hide();$('#packages-button').hide();$('#admin-button').hide();$('#become-author-button').hide();");
             }
             if (isset($_SESSION["privileges"]) && $_SESSION["privileges"] <= 1) {
                 echo("$('#admin-button').hide();");
                 if ($_SESSION["privileges"] <= 0) {
-                    echo("$('#packages-button').hide();$('#admin-button').hide();");
+                    echo("$('#packages-button').hide();");
                 }
             }
             if (isset($_SESSION["resetPwd"])) {
@@ -262,6 +327,7 @@ session_start();
             $('#logged-text').html();
             $('#login-button').show();
             $('#register-button').show();
+            $('#become-author-button').hide();
             $('#logged-button').hide();
             $('#packages-button').hide();
             $('#admin-button').hide();
@@ -344,6 +410,9 @@ session_start();
                 </li>
                 <li class="nav-item" id="register-button">
                     <a class="nav-link" href="#" data-toggle="modal" data-target="#register">Register</a>
+                </li>
+                <li class="nav-item" id="become-author-button">
+                    <a class="nav-link" href="#" data-toggle="modal" data-target="#become-author">Become an author</a>
                 </li>
                 <li class="nav-item" id="application-button">
                     <a class="nav-link" href="?application">Desktop application</a>
@@ -506,6 +575,50 @@ session_start();
             </div>
         </div>
 
+        <!-- Become an author -->
+        <div class="modal fade" id="become-author" tabindex="-1" data-backdrop="static" aria-labelledby="become-author-title"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form name="become-author" class="become-author-form" autocomplete="off">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="become-author-title">Become an RW DLS author</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label for="become-author-realname">Real name</label>
+                                <input type="text" class="form-control" id="become-author-realname" autocomplete="name" minlength="4" maxlength="128" name="realname" required>
+                                <small id="real-name-help" class="form-text text-muted">We'll never share your name with
+                                    anyone else.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="about-you">Short info about you</label>
+                                <textarea class="form-control" id="become-author-description" rows="3" minlength="250" maxlength="2048" aria-describedby="become-author-description-help" name="about" placeholder="Slight info about you, your projects, why should you get permissions to upload packages, any proof of things you've already done for TS." required></textarea>
+                                <small id="become-author-description-help" class="form-text text-muted">You can write this in either English, Deutsch, Polski, Česky, or Slovensky.</small>
+                            </div>
+                            <div class="form-group">
+                                <div class="custom-file">
+                                    <input type="file" class="custom-file-input" id="become-author-images" name="images[]" accept="image/*" multiple="multiple" />
+                                    <label class="custom-file-label" for="become-author-images" id="imgname" required>Choose images of your work to upload</label>
+                                </div>
+                            </div>
+                            <div class="progress">
+                                <div id="custom-file-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+                            </div>
+                            <div class="error" id="become-author-error"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Submit request</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Password reset -->
         <div class="modal fade" id="pwdReset" tabindex="-1" data-backdrop="static" aria-labelledby="pwdResetTitle"
             aria-hidden="true">
@@ -573,13 +686,10 @@ session_start();
         ?>
     </div>
     <footer>
-        <p class="text-light" style="margin: auto">
-            © Zdendaki.net & JachyHm.cz 2020
-        </p>
-
-
+    <p class="text-light" style="margin: auto">
+        © Zdendaki.net &amp; JachyHm.cz 2020 | <a href="mailto:support@jachyhm.cz" class="text-light">support@jachyhm.cz</a>
+    </p>
     </footer>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx"
         crossorigin="anonymous"></script>

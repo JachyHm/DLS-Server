@@ -16,7 +16,7 @@ $date_registered = "";
 $total_packages = 0;
 $privileges = "";
 
-$sql = $mysqli->prepare('SELECT `nickname`, `email`, `date_created`, `privileges` FROM `users` WHERE `id` = ?;');
+$sql = $mysqli->prepare('SELECT `nickname`, `email`, `date_created`, `roles`.`display_name` AS `privileges` FROM `users` LEFT JOIN `roles` ON `users`.`privileges` = `roles`.`id` WHERE `users`.`id` = ?;');
 $sql->bind_param('i', $author_id);
 $sql->execute();
 $queryResult = $sql->get_result();

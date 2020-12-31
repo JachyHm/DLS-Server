@@ -5,7 +5,7 @@ $_SESSION["resetPwd"] = null;
 if (isset($_POST["t"]) && isset($_POST["password"])) {
     if (isset($_POST["recaptcha_token"])) {
         $url = 'https://www.google.com/recaptcha/api/siteverify';
-        $data = array('secret' => '6LcDPNkZAAAAABy9d7WwurgUwvjFM5JzKvPIlNcK', 'response' => $_POST["recaptcha_token"]);
+        $data = array('secret' => $captcha_secret, 'response' => $_POST["recaptcha_token"]);
         $options = array(
             'http' => array(
                 'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
