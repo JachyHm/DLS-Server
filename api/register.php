@@ -5,7 +5,7 @@ require "../dls_db.php";
 
 if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
     $url = 'https://www.google.com/recaptcha/api/siteverify';
-    $data = array('secret' => '6LcDPNkZAAAAABy9d7WwurgUwvjFM5JzKvPIlNcK', 'response' => (isset($_POST["recaptcha_token"]) ? $_POST["recaptcha_token"] : $_GET["recaptcha_token"]));
+    $data = array('secret' => $captcha_secret, 'response' => (isset($_POST["recaptcha_token"]) ? $_POST["recaptcha_token"] : $_GET["recaptcha_token"]));
     $options = array(
         'http' => array(
             'header'  => "Content-type: application/x-www-form-urlencoded\r\n",

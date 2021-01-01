@@ -26,7 +26,7 @@ session_start();
     <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
     <script type="text/javascript" src="js/jquery-3.5.1.min.js"></script>
     <script src="https://unpkg.com/bootstrap-table@1.18.0/dist/bootstrap-table.min.js"></script>
-    <script src="https://www.google.com/recaptcha/api.js?render=6LcDPNkZAAAAALoiQBUiOI5vWpSRZFWG1HciV3BT"></script>
+    <script src="https://www.google.com/recaptcha/api.js?render=6LefLhwaAAAAAJRR3LBEhcrmQUs6v2RdN2A4qdzb"></script>
 
     <script type="text/javascript">
         var loginErrorTimeout;
@@ -47,7 +47,7 @@ session_start();
                 e.preventDefault();
 
                 grecaptcha.ready(function() {
-                    grecaptcha.execute('6LcDPNkZAAAAALoiQBUiOI5vWpSRZFWG1HciV3BT', {action: 'login'}).then(function(token) {
+                    grecaptcha.execute('6LefLhwaAAAAAJRR3LBEhcrmQUs6v2RdN2A4qdzb', {action: 'login'}).then(function(token) {
                         var form = $(this);
                         var url = "api/login";
 
@@ -104,7 +104,7 @@ session_start();
                 e.preventDefault();
 
                 grecaptcha.ready(function() {
-                    grecaptcha.execute('6LcDPNkZAAAAALoiQBUiOI5vWpSRZFWG1HciV3BT', {action: 'register'}).then(function(token) {
+                    grecaptcha.execute('6LefLhwaAAAAAJRR3LBEhcrmQUs6v2RdN2A4qdzb', {action: 'register'}).then(function(token) {
                         var form = $(this);
                         var url = "api/register";
 
@@ -139,7 +139,7 @@ session_start();
                 e.preventDefault();
 
                 grecaptcha.ready(function() {
-                    grecaptcha.execute('6LcDPNkZAAAAALoiQBUiOI5vWpSRZFWG1HciV3BT', {action: 'register'}).then(function(token) {
+                    grecaptcha.execute('6LefLhwaAAAAAJRR3LBEhcrmQUs6v2RdN2A4qdzb', {action: 'register'}).then(function(token) {
                         var form = $(this);
                         var url = "api/register?update";
 
@@ -176,7 +176,7 @@ session_start();
                 e.preventDefault();
                 if (user.logged && user.privileges == 0) {
                     grecaptcha.ready(function() {
-                        grecaptcha.execute('6LcDPNkZAAAAALoiQBUiOI5vWpSRZFWG1HciV3BT', {action: 'claim_author'}).then(function(token) {
+                        grecaptcha.execute('6LefLhwaAAAAAJRR3LBEhcrmQUs6v2RdN2A4qdzb', {action: 'claim_author'}).then(function(token) {
                             var form = document.forms.namedItem("become-author");
                             var url = "api/becomeAuthor";
 
@@ -239,7 +239,7 @@ session_start();
                 e.preventDefault();
 
                 grecaptcha.ready(function() {
-                    grecaptcha.execute('6LcDPNkZAAAAALoiQBUiOI5vWpSRZFWG1HciV3BT', {action: 'pwd_reset'}).then(function(token) {
+                    grecaptcha.execute('6LefLhwaAAAAAJRR3LBEhcrmQUs6v2RdN2A4qdzb', {action: 'pwd_reset'}).then(function(token) {
                         var form = $(this);
                         var url = "api/pwd_reset";
 
@@ -291,7 +291,7 @@ session_start();
             $_SESSION["successMessage"] = null;
             $_SESSION["errorMessage"] = null;
             if (isset($_SESSION["logged"]) && $_SESSION["logged"]) {
-                echo("$('#login-button').hide();$('#register-button').hide();$('#become-author-button').show();");
+                echo("$('#login-button').hide();$('#register-button').hide();");
                 echo("$('#profile-name').val('".$_SESSION["realname"]."');");
                 echo("$('#profile-email').val('".$_SESSION["email"]."');");
                 echo("$('#profile-password').val('');");
@@ -302,7 +302,11 @@ session_start();
                 echo("$('#admin-button').hide();");
                 if ($_SESSION["privileges"] <= 0) {
                     echo("$('#packages-button').hide();");
+                } else {
+                    echo("$('#become-author-button').hide();");
                 }
+            } else {
+                echo("$('#become-author-button').hide();");
             }
             if (isset($_SESSION["resetPwd"])) {
                 echo('$("#pwdReset").modal("show");');
@@ -351,7 +355,7 @@ session_start();
         }
         function resetPwd() {
             grecaptcha.ready(function() {
-                grecaptcha.execute('6LcDPNkZAAAAALoiQBUiOI5vWpSRZFWG1HciV3BT', {action: 'register'}).then(function(token) {
+                grecaptcha.execute('6LefLhwaAAAAAJRR3LBEhcrmQUs6v2RdN2A4qdzb', {action: 'register'}).then(function(token) {
                     if (validateEmail($("#login-username").val())) {
                         $.get('api/register?resetPwd&recaptcha_token='+token+'&email='+$("#login-username").val(), function(data) {
                             if (data.code >= 0) {
