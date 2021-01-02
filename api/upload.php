@@ -38,7 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $category = $_POST["category"];
                                 $era = $_POST["era"];
                                 $country = $_POST["country"];
-                                $name = pathinfo($_FILES['file']['name'], PATHINFO_BASENAME);
+                                $original_name = pathinfo($_FILES['file']['name'], PATHINFO_BASENAME);
+                                $name = bin2hex(random_bytes(16)).".".pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION);
                                 $path = $files_folder . $name;
 
                                 $old_filename = "";
@@ -74,8 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     }
                                 }
 
-                                $sql = $mysqli->prepare('SELECT * FROM `package_list` WHERE `file_name` = ?;');
-                                $sql->bind_param('s', $name);
+                                $sql = $mysqli->prepare('SELECT * FROM `package_list` WHERE `original_file_name` = ?;');
+                                $sql->bind_param('s', $original_name);
                                 $sql->execute();
                                 $queryResult = $sql->get_result();
 
@@ -131,7 +132,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     if ($ext && in_array(strtolower($ext), array("bin", "xml"))) {
                                         $dir = pathinfo($_name, PATHINFO_DIRNAME)."/";
                                         $basename = pathinfo($_name, PATHINFO_FILENAME);
-                                        $fname = $target_path.$dir.$basename;
+                                        if ($dir == "./") {
+                                            $fname = $target_path.$basename;
+                                        } else {
+                                            $fname = $target_path.$dir.$basename;
+                                        }
                                         array_push($files, str_replace('\\', '/', $fname));
                                     }
                                 }
@@ -156,11 +161,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                         $new_version = $old_version+1;
                                         if ($actualisation) {
-                                            $sql = $mysqli->prepare('INSERT INTO `package_list`(`id`, `file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `description`, `target_path`) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `id` = ?, `file_name` = ?, `display_name` = ?, `category` = ?, `era` = ?, `country` = ?, `version` = ?, `owner` = ?, `description` = ?, `target_path` = ?;');
-                                            $sql->bind_param('issiiiiississiiiiiss', $package_id, $name, $display_name, $category, $era, $country, $new_version, $userid, $desc, $target_path, $package_id, $name, $display_name, $category, $era, $country, $new_version, $userid, $desc, $target_path);
+                                            $sql = $mysqli->prepare('INSERT INTO `package_list`(`id`, `file_name`, `original_file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `description`, `target_path`) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `id` = ?, `file_name` = ?, `original_file_name` = ?, `display_name` = ?, `category` = ?, `era` = ?, `country` = ?, `version` = ?, `owner` = ?, `description` = ?, `target_path` = ?;');
+                                            $sql->bind_param('isssiiiiississsiiiiiss', $package_id, $name, $original_name, $display_name, $category, $era, $country, $new_version, $userid, $desc, $target_path, $package_id, $name, $original_name, $display_name, $category, $era, $country, $new_version, $userid, $desc, $target_path);
                                         } else {
-                                            $sql = $mysqli->prepare('INSERT INTO `package_list`(`file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `description`, `target_path`) VALUES(?, ?, ?, ?, ?, 1, ?, ?, ?);');
-                                            $sql->bind_param('ssiiiiss', $name, $display_name, $category, $era, $country, $userid, $desc, $target_path);
+                                            $sql = $mysqli->prepare('INSERT INTO `package_list`(`file_name`, `original_file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `description`, `target_path`) VALUES(?, ?, ?, ?, ?, ?, 1, ?, ?, ?);');
+                                            $sql->bind_param('sssiiiiss', $name, $original_name, $display_name, $category, $era, $country, $userid, $desc, $target_path);
                                         }
                     
                                         if ($sql->execute()) {

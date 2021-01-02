@@ -1,5 +1,5 @@
 <?php
-header('Content-type: application/json');
+require "../dls_db.php";
 
 $max_size = 5 * 1024 * 1024; // max file size (5mb)
 $files_folder = '../files/requests_images/'; // upload directory
@@ -18,12 +18,23 @@ function flushResponse($code, $message)
     die($response_json);
 }
 
+function raiseError($message) {
+    $_SESSION["errorMessage"] = $message;
+    header("Location: ../");
+    die();
+}
+
+function successMessage($message) {
+    $_SESSION["successMessage"] = $message;
+    header("Location: ../");
+    die();
+}
+
 #flushResponse(-1, "Not implemented yet!");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_SESSION["logged"]) && isset($_SESSION["userid"]) && isset($_POST["recaptcha_token"]) && isset($_POST["userid"]) && isset($_POST["realname"]) && isset($_POST["about"])) {
         if ($_SESSION["userid"] == $_SESSION["userid"]) {
-            include "../dls_db.php";
             if (!empty($_SERVER['HTTP_CLIENT_IP'])) { //check ip from share internet
                 $ip=$_SERVER['HTTP_CLIENT_IP'];
             } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { //to check ip is pass from proxy
@@ -101,9 +112,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!empty($queryResult) && $queryResult->num_rows > 0) {
                         $user_email = $queryResult->fetch_assoc()["email"];
                     }
-                    
-                    $sql = $mysqli->prepare('INSERT INTO `become_author_requests` (`user_id`, `real_name`, `about`) VALUES (?, ?, ?);');
-                    $sql->bind_param('iss', $userid, $realname, $about);
+
+                    $token = bin2hex(random_bytes(128));
+                    $sql = $mysqli->prepare('INSERT INTO `become_author_requests` (`user_id`, `real_name`, `about`, `token`) VALUES (?, ?, ?, ?);');
+                    $sql->bind_param('isss', $userid, $realname, $about, $token);
                     $sql->execute();
 
                     $request_id = $mysqli->insert_id;
@@ -127,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <!--<![endif]-->
                                             <div align=\"center\" class=\"img-container center autowidth\" style=\"padding-right: 0px;padding-left: 0px;\">
                                                 <!--[if mso]><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr style=\"line-height:0px\"><td style=\"padding-right: 0px;padding-left: 0px;\" align=\"center\"><![endif]-->
-                                                <img align=\"center\" alt=\"Alternate text\" border=\"0\" class=\"center autowidth\" src=\"https://dls.rw.jachyhm.cz/files/requests_images/$file\" style=\"text-decoration: none; -ms-interpolation-mode: bicubic; height: auto; border: 0; width: 100%; max-width: 500px; display: block;\" title=\"Alternate text\" width=\"500\"/>
+                                                <img align=\"center\" alt=\"$file\" border=\"0\" class=\"center autowidth\" src=\"https://dls.rw.jachyhm.cz/files/requests_images/$file\" style=\"text-decoration: none; -ms-interpolation-mode: bicubic; height: auto; border: 0; width: 100%; max-width: 500px; display: block;\" title=\"$file\" width=\"500\"/>
                                                 <!--[if mso]></td></tr></table><![endif]-->
                                             </div>
                                             <!--[if (!mso)&(!IE)]><!-->
@@ -208,7 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 <!--<![endif]-->
                                                 <div align=\"center\" class=\"img-container center fixedwidth\" style=\"padding-right: 0px;padding-left: 0px;\">
                                                     <!--[if mso]><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr style=\"line-height:0px\"><td style=\"padding-right: 0px;padding-left: 0px;\" align=\"center\"><![endif]-->
-                                                    <img align=\"center\" alt=\"Alternate text\" border=\"0\" class=\"center fixedwidth\" src=\"https://dls.rw.jachyhm.cz/android-chrome-192x192.png\" style=\"text-decoration: none; -ms-interpolation-mode: bicubic; height: auto; border: 0; width: 100%; max-width: 50px; display: block;\" title=\"Alternate text\" width=\"50\"/>
+                                                    <img align=\"center\" alt=\"DLS logo\" border=\"0\" class=\"center fixedwidth\" src=\"https://dls.rw.jachyhm.cz/android-chrome-192x192.png\" style=\"text-decoration: none; -ms-interpolation-mode: bicubic; height: auto; border: 0; width: 100%; max-width: 50px; display: block;\" title=\"DLS logo\" width=\"50\"/>
                                                     <!--[if mso]></td></tr></table><![endif]-->
                                                 </div>
                                                 <!--[if (!mso)&(!IE)]><!-->
@@ -425,7 +437,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 <!--<![endif]-->
                                                 <div align=\"center\" class=\"button-container\" style=\"padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;\">
                                                     <!--[if mso]><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border-spacing: 0; border-collapse: collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;\"><tr><td style=\"padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px\" align=\"center\"><v:roundrect xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"urn:schemas-microsoft-com:office:word\" href=\"https://google.com\" style=\"height:31.5pt; width:140.25pt; v-text-anchor:middle;\" arcsize=\"10%\" stroke=\"false\" fillcolor=\"#4cd137\"><w:anchorlock/><v:textbox inset=\"0,0,0,0\"><center style=\"color:#ffffff; font-family:Tahoma, Verdana, sans-serif; font-size:16px\"><![endif]-->
-                                                    <a href=\"##CONTENT05\" style=\"-webkit-text-size-adjust: none; text-decoration: none; display: inline-block; color: #ffffff; background-color: #4cd137; border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; width: auto; width: auto; border-top: 1px solid #4cd137; border-right: 1px solid #4cd137; border-bottom: 1px solid #4cd137; border-left: 1px solid #4cd137; padding-top: 5px; padding-bottom: 5px; font-family: 'Roboto', Tahoma, Verdana, Segoe, sans-serif; text-align: center; mso-border-alt: none; word-break: keep-all;\" target=\"_blank\">
+                                                    <a href=\"https://dls.rw.jachyhm.cz/api/becomeAuthor?t=$token&action=approve\" style=\"-webkit-text-size-adjust: none; text-decoration: none; display: inline-block; color: #ffffff; background-color: #4cd137; border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; width: auto; width: auto; border-top: 1px solid #4cd137; border-right: 1px solid #4cd137; border-bottom: 1px solid #4cd137; border-left: 1px solid #4cd137; padding-top: 5px; padding-bottom: 5px; font-family: 'Roboto', Tahoma, Verdana, Segoe, sans-serif; text-align: center; mso-border-alt: none; word-break: keep-all;\" target=\"_blank\">
                                                         <span style=\"padding-left:20px;padding-right:20px;font-size:16px;display:inline-block;\">
                                                             <span style=\"font-size: 16px; line-height: 2; word-break: break-word; mso-line-height-alt: 32px;\">Accept request
                                                             </span>
@@ -446,7 +458,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 <!--<![endif]-->
                                                 <div align=\"center\" class=\"button-container\" style=\"padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;\">
                                                     <!--[if mso]><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border-spacing: 0; border-collapse: collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;\"><tr><td style=\"padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px\" align=\"center\"><v:roundrect xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"urn:schemas-microsoft-com:office:word\" href=\"https://google.com\" style=\"height:31.5pt; width:141.75pt; v-text-anchor:middle;\" arcsize=\"10%\" stroke=\"false\" fillcolor=\"#e84118\"><w:anchorlock/><v:textbox inset=\"0,0,0,0\"><center style=\"color:#ffffff; font-family:Tahoma, Verdana, sans-serif; font-size:16px\"><![endif]-->
-                                                    <a href=\"##CONTENT06\" style=\"-webkit-text-size-adjust: none; text-decoration: none; display: inline-block; color: #ffffff; background-color: #e84118; border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; width: auto; width: auto; border-top: 1px solid #e84118; border-right: 1px solid #e84118; border-bottom: 1px solid #e84118; border-left: 1px solid #e84118; padding-top: 5px; padding-bottom: 5px; font-family: 'Roboto', Tahoma, Verdana, Segoe, sans-serif; text-align: center; mso-border-alt: none; word-break: keep-all;\" target=\"_blank\">
+                                                    <a href=\"https://dls.rw.jachyhm.cz/api/becomeAuthor?t=$token&action=deny\" style=\"-webkit-text-size-adjust: none; text-decoration: none; display: inline-block; color: #ffffff; background-color: #e84118; border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; width: auto; width: auto; border-top: 1px solid #e84118; border-right: 1px solid #e84118; border-bottom: 1px solid #e84118; border-left: 1px solid #e84118; padding-top: 5px; padding-bottom: 5px; font-family: 'Roboto', Tahoma, Verdana, Segoe, sans-serif; text-align: center; mso-border-alt: none; word-break: keep-all;\" target=\"_blank\">
                                                         <span style=\"padding-left:20px;padding-right:20px;font-size:16px;display:inline-block;\">
                                                             <span style=\"font-size: 16px; line-height: 2; word-break: break-word; mso-line-height-alt: 32px;\">Decline request
                                                             </span>
@@ -530,6 +542,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } else {
         flushResponse(-1, "Not all parameters set!");
+    }
+} else if ($_SERVER["REQUEST_METHOD"] === 'GET') {
+    if (isset($_GET["t"]) && isset($_GET["action"]) && isset($_SESSION["logged"])) {
+        $token = $_GET["t"];
+        if ($_SESSION["logged"]) {
+            if ($_SESSION["privileges"] > 1) {
+                $sql = $mysqli->prepare('SELECT * FROM `become_author_requests` LEFT JOIN `users` ON `become_author_requests`.`user_id` = `users`.`id` WHERE `become_author_requests`.`token` = ?;');
+                $sql->bind_param('s', $token);
+                $sql->execute();
+                $queryResult = $sql->get_result();
+
+                if (!empty($queryResult) && $queryResult->num_rows > 0) {
+                    $row = $queryResult->fetch_assoc();
+
+                    if ($row["closed"] === 0) {
+                        $action = $_GET["action"];
+                        $username = $row["nickname"];
+                        if ($action == "approve") {
+                            $sql = $mysqli->prepare('UPDATE `become_author_requests` SET `closed` = 1, `success` = 1 WHERE `token` = ?;');
+                            $sql->bind_param('s', $token);
+                            $sql->execute();
+
+                            $sql = $mysqli->prepare('UPDATE `users` SET `privileges` = 1 WHERE `id` = ?;');
+                            $sql->bind_param('i', $row["user_id"]);
+                            $sql->execute();
+                            successMessage("User request for $username succesfully approved!");
+                        } elseif ($action == "deny") {
+                            $sql = $mysqli->prepare('UPDATE `become_author_requests` SET `closed` = 1, `success` = 0 WHERE `token` = ?;');
+                            $sql->bind_param('s', $token);
+                            $sql->execute();
+                            successMessage("User request for $username succesfully denied!");
+                        } else {
+                            raiseError("Invalid action!");
+                        }
+                    } else {
+                        raiseError("This request is already closed!");
+                    }
+                } else {
+                    raiseError("No such author request found!");
+                }
+            } else {
+                raiseError("You have to be at least global moderator to approve author requests!");
+            }
+        } else {
+            raiseError("You have to be logged in to approve author requests!");
+        }
+    } else {
+        raiseError("Not all parameters set!");
     }
 } else {
     flushResponse(-1, "Bad request!");

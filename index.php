@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="cs">
 <?php
+require "dls_db.php";
 session_start();
 ?>
 <head>
@@ -37,6 +38,18 @@ session_start();
         var errorTimeout;
         <?php 
         if (isset($_SESSION["logged"]) && $_SESSION["logged"]) {
+            $sql = $mysqli->prepare('SELECT * FROM `users` WHERE `id` = ?;');
+            $sql->bind_param('i', $_SESSION["userid"]);
+            $sql->execute();
+            $queryResult = $sql->get_result();
+        
+            if (!empty($queryResult)) {
+                if ($queryResult->num_rows > 0) {
+                    $row = $queryResult->fetch_assoc();
+                    $_SESSION["realname"] = $row["nickname"];
+                    $_SESSION["privileges"] = $row["privileges"];
+                }
+            }
             echo('var user = {logged:'.boolval($_SESSION["logged"]).', name:"'.$_SESSION["realname"].'", email:"'.$_SESSION["email"].'", id:'.$_SESSION["userid"].', privileges:'.$_SESSION["privileges"].'};');
         } else {
             echo('var user = {logged:false, name:"", email:"", id:null, privileges:null};');
@@ -605,7 +618,7 @@ session_start();
                             </div>
                             <div class="form-group">
                                 <div class="custom-file">
-                                    <input type="file" class="custom-file-input" id="become-author-images" name="images[]" accept="image/*" multiple="multiple" />
+                                    <input type="file" class="custom-file-input" id="become-author-images" name="images[]" accept="image/png, image/jpeg, image/bmp, image/gif" multiple="multiple" />
                                     <label class="custom-file-label" for="become-author-images" id="imgname" required>Choose images of your work to upload</label>
                                 </div>
                             </div>

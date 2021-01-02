@@ -2,7 +2,7 @@
     var onChangeTimer;
     $(document).ready(function(){
         function performQuery(){
-            var query = 'api/query?keyword='+$("#keyword").val()+'&searchBy='+$("input[name='searchBy']:checked").val();
+            var query = 'api/query?keyword='+encodeURIComponent($("#keyword").val())+'&searchBy='+$("input[name='searchBy']:checked").val();
             if ($("#category").val()) {
                 query += '&category='+$("#category").val();
             }
@@ -63,7 +63,6 @@
                 <select class="form-control" placeholder="Category" id="category">
                     <option value="" selected disabled>Category</option>
                     <?php
-                    require "dls_db.php";
                     $sql = $mysqli->prepare('SELECT * FROM `categories`;');
                     $sql->execute();
                     $queryResult = $sql->get_result();

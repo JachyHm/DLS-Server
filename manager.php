@@ -1,6 +1,4 @@
 <?php
-require "dls_db.php";
-
 if (!isset($_SESSION["logged"]) || !$_SESSION["logged"]) {
     $_SESSION["errorMessage"] = "You have to be logged in to modify packages!";
     echo("<script> window.location.replace('.') </script>");
@@ -336,7 +334,7 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
                 <select class="form-control" id="actualisation" name="actualisation" required style="display: none;">
                     <option selected disabled>Which package are you updating?</option>
                     <?php
-                    $sql = $mysqli->prepare('SELECT * FROM `package_list` WHERE `owner` = ? ORDER BY `display_name`;');
+                    $sql = $mysqli->prepare('SELECT `id`, `display_name` FROM `package_list` WHERE `owner` = ? ORDER BY `display_name`;');
                     $sql->bind_param('i', $_SESSION["userid"]);
                     $sql->execute();
                     $queryResult = $sql->get_result();

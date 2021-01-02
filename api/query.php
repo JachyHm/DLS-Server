@@ -28,9 +28,9 @@ function flushResponse($code, $message, $body, $mysqli)
 
 if (isset($_GET["file"]) || isset($_POST["file"])) {
     if (isset($_GET["file"])) {
-        $fname = "%".trim(urldecode($_GET["file"]))."%";
+        $fname = trim($_GET["file"]);
     } else {
-        $fname = "%".trim(urldecode($_POST["file"]))."%";
+        $fname = trim($_POST["file"]);
     }
     $fname = str_replace('\\', '/', $fname);
 
@@ -64,7 +64,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
                     $row = $queryResult->fetch_assoc();
 
                     $package->id = $package_id;
-                    $package->file_name = $row["file_name"];
+                    $package->file_name = $row["original_file_name"];
                     $package->display_name = $row["display_name"];
                     $package->category = $row["category"];
                     $package->era = $row["era"];
@@ -162,7 +162,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
             $row = $queryResult->fetch_assoc();
 
             $package->id = $package_id;
-            $package->file_name = $row["file_name"];
+            $package->file_name = $row["original_file_name"];
             $package->display_name = $row["display_name"];
             $package->category = $row["category"];
             $package->era = $row["era"];
@@ -211,7 +211,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
     $query_pattern = "";
     $query_array = array();
 
-    $keyword = trim(urldecode($_GET["keyword"]));
+    $keyword = trim($_GET["keyword"]);
     $keyword = str_replace('\\', '/', $keyword);
     if (!empty($keyword)) {
         $switch = 9;
@@ -348,9 +348,9 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
     flushResponse(-1, "Unknown error: ".$sql->error, array(), $mysqli);
 } else if (isset($_GET["searchFor"]) || isset($_POST["searchFor"])) {
     if (isset($_GET["searchFor"])) {
-        $keyword = trim(urldecode($_GET["searchFor"]))."%";
+        $keyword = trim($_GET["searchFor"])."%";
     } else {
-        $keyword = trim(urldecode($_POST["searchFor"]))."%";
+        $keyword = trim($_POST["searchFor"])."%";
     }
     if (!empty($keyword)) {
         $limit = 30;
@@ -370,6 +370,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
             if (!empty($queryResult)) {
                 if ($queryResult->num_rows > 0) {
                     while ($row = $queryResult->fetch_assoc()) {
+                        $row["file_name"] = $row["original_file_name"];
                         $rows[] = $row;
                         array_push($ids, $row["id"]);
                     }
@@ -386,6 +387,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
                         if ($queryResult->num_rows > 0) {
                             while ($row = $queryResult->fetch_assoc()) {
                                 if (!in_array($row["id"], $ids)) {
+                                    $row["file_name"] = $row["original_file_name"];
                                     array_push($rows, $row);
                                 }
                             }
@@ -406,9 +408,9 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
     }
 } else if (isset($_GET["packageFile"]) || isset($_POST["packageFile"])) {
     if (isset($_GET["packageFile"])) {
-        $keyword = trim(urldecode($_GET["packageFile"]));
+        $keyword = trim($_GET["packageFile"]);
     } else {
-        $keyword = trim(urldecode($_POST["packageFile"]));
+        $keyword = trim($_POST["packageFile"]);
     }
     $keyword = str_replace('\\', '/', $keyword);
     if (!empty($keyword)) {
@@ -420,6 +422,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
             if (!empty($queryResult)) {
                 if ($queryResult->num_rows > 0) {
                     $row = $queryResult->fetch_assoc();
+                    $row["file_name"] = $row["original_file_name"];
                     flushResponse(1, "There is file with such name.", $row, $mysqli);
                 }
             }
@@ -431,9 +434,9 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
     }
 } else if (isset($_GET["getVersions"]) || isset($_POST["getVersions"])) {
     if (isset($_GET["getVersions"])) {
-        $packages_string = trim(urldecode($_GET["getVersions"]));
+        $packages_string = trim($_GET["getVersions"]);
     } else {
-        $packages_string = trim(urldecode($_POST["getVersions"]));
+        $packages_string = trim($_POST["getVersions"]);
     }
     $packages = explode(",", $packages_string);
 

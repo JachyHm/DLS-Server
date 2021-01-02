@@ -1,5 +1,4 @@
 <?php
-require "dls_db.php";
 
 $version_code = "AN ERROR OCCURED WHEN LOADING DATABASE";
 $date_published = "";

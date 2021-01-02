@@ -1,6 +1,4 @@
 <?php
-require "dls_db.php";
-
 $package_name = "";
 $package_desc = "";
 $author = "";
@@ -20,7 +18,7 @@ $paid = "";
 $steamappid = "";
 $steam_dev = "";
 
-$sql = $mysqli->prepare('SELECT `package_list`.`id`, `file_name`, `display_name`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`, `steam_dev`, `users`.`nickname` AS `author`, `package_list`.`category` AS `category_id`, `categories`.`text` AS `category`, `era` AS `era_id`, `eras`.`text` AS `era`, `package_list`.`country` AS `country_id`, `countries`.`text` AS `country` FROM `package_list` LEFT JOIN `users` ON `package_list`.`owner` = `users`.`id` LEFT JOIN `categories` ON `package_list`.`category` = `categories`.`id` LEFT JOIN `eras` ON `package_list`.`era` = `eras`.`id` LEFT JOIN `countries` ON `package_list`.`country` = `countries`.`id` WHERE `package_list`.`id` = ?;');
+$sql = $mysqli->prepare('SELECT `package_list`.`id`, `original_file_name`, `display_name`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`, `steam_dev`, `users`.`nickname` AS `author`, `package_list`.`category` AS `category_id`, `categories`.`text` AS `category`, `era` AS `era_id`, `eras`.`text` AS `era`, `package_list`.`country` AS `country_id`, `countries`.`text` AS `country` FROM `package_list` LEFT JOIN `users` ON `package_list`.`owner` = `users`.`id` LEFT JOIN `categories` ON `package_list`.`category` = `categories`.`id` LEFT JOIN `eras` ON `package_list`.`era` = `eras`.`id` LEFT JOIN `countries` ON `package_list`.`country` = `countries`.`id` WHERE `package_list`.`id` = ?;');
 $sql->bind_param('i', $package_id);
 $sql->execute();
 $queryResult = $sql->get_result();
@@ -39,7 +37,7 @@ if (!empty($queryResult)) {
         $era = $row["era"];
         $era_id = $row["era_id"];
         $country = $row["country"];
-        $filename = $row["file_name"];
+        $filename = $row["original_file_name"];
         $version = $row["version"];
         $datetime = $row["datetime"];
         $target_path = $row["target_path"];
@@ -122,10 +120,10 @@ if (!empty($queryResult)) {
             $(id).html("");
             jQuery.each(data, function(i, val) {
                 if (type === "selected") {
-                    $(id).append('<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="'+type+'ChB'+val.id+'" checked><label class="custom-control-label" for="'+type+'ChB'+val.id+'">'+val.display_name+' (<'+val.id+'> '+val.file_name+')</label></div>');
+                    $(id).append('<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="'+type+'ChB'+val.id+'" checked><label class="custom-control-label" for="'+type+'ChB'+val.id+'">'+val.display_name+' (<'+val.id+'> '+val.original_file_name+')</label></div>');
                     $('#'+type+'ChB'+val.id).on('click', function() {onChBClick(val.id, type)});
                 } else if (selectedDeps.find((o) => { return o.id === val.id }) == null) {
-                    $(id).append('<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="'+type+'ChB'+val.id+'"><label class="custom-control-label" for="'+type+'ChB'+val.id+'">'+val.display_name+' (<'+val.id+'> '+val.file_name+')</label></div>');
+                    $(id).append('<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="'+type+'ChB'+val.id+'"><label class="custom-control-label" for="'+type+'ChB'+val.id+'">'+val.display_name+' (<'+val.id+'> '+val.original_file_name+')</label></div>');
                     $('#'+type+'ChB'+val.id).on('click', function() {onChBClick(val.id, type)});
                 }
             });

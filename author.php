@@ -1,5 +1,4 @@
 <?php
-require "dls_db.php";
 
 function obfuscate_email($email)
 {
