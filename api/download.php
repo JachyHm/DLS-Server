@@ -8,6 +8,7 @@ function flushResponse($code, $message, $body, $mysqli)
 {
     header('Content-type: application/json');
 
+    $response = new stdClass();
     $response->code = $code;
     $response->message = $message;
     $response->content = $body;

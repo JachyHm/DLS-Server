@@ -41,6 +41,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $userid = $_SESSION["userid"];
         if (isset($_POST["package_id"]) && isset($_POST["package_name"]) && isset($_POST["target_path"]) && isset($_POST["description"])) {
+            $sql = $mysqli->prepare('SELECT `target_path` FROM `package_list` WHERE `id` = ?;');
+            $sql->bind_param('i', $_POST["package_id"]);
+            $sql->execute();
+            $queryResult = $sql->get_result();
+        
+            $target_path = "";
+            if (!empty($queryResult)) {
+                if ($queryResult->num_rows > 0) {
+                    $target_path = $queryResult->fetch_assoc()["target_path"];
+                }
+            }
+
             $query = "UPDATE `package_list` SET `display_name` = ?, `target_path` = ?, `description` = ?";
             $query_pattern = "sss";
             $query_array = array($_POST["package_name"], $_POST["target_path"], $_POST["description"]);
@@ -80,6 +92,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             call_user_func_array(array($sql,'bind_param'), $query_array);
 
             if ($sql->execute()) {
+                if ($target_path == "") {
+                    $sql = $mysqli->prepare('UPDATE `file_list` SET `fname` = CONCAT(?,`fname`) WHERE `package_id` = ?;');
+                    $sql->bind_param('si', $_POST["target_path"], $package_id);
+                    $sql->execute();
+                } else {
+                    $sql = $mysqli->prepare('UPDATE `file_list` SET `fname` = REPLACE(`fname`, ?, ?) WHERE `package_id` = ?;');
+                    $sql->bind_param('ssi', $target_path, $_POST["target_path"], $package_id);
+                    $sql->execute();
+                }
+
                 db_log(16, true, $userid, $ip, $_SESSION["token"], "Package updated $package_id!", $mysqli);
                 $_SESSION["successMessage"] = "Package successfully updated!";
                 header("Location: ../?package=".$package_id);
@@ -226,6 +248,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 } else {
     header('Content-type: application/json');
 
+    $response = new stdClass();
     $response->code = -1;
     $response->message = "Bad request!";
     

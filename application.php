@@ -6,7 +6,6 @@ $comment = "";
 $filepath = "";
 
 $sql = $mysqli->prepare('SELECT `version_name`, `deployed`, `comment`, `file_path` FROM `app_versions` ORDER BY `id` DESC LIMIT 1;');
-$sql->bind_param('i', $author_id);
 $sql->execute();
 $queryResult = $sql->get_result();
 

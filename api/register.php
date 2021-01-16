@@ -40,6 +40,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
                         $sql->bind_param('ss', $pwd_hash, $email);
                         $res = $sql->execute();
                         if (!$res) {
+                            $response = new stdClass();
                             $response->code = -1;
                             $response->message = "Updating password failed!";
     
@@ -55,6 +56,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
                         $sql->bind_param('ss', $nick, $email);
                         $res = $sql->execute();
                         if (!$res) {
+                            $response = new stdClass();
                             $response->code = -1;
                             $response->message = "Updating nickname failed!";
     
@@ -71,6 +73,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
                         }
                     }
     
+                    $response = new stdClass();
                     $response->code = -1;
                     $response->message = "Nothing was updated!";
     
@@ -106,6 +109,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
                             'X-Mailer: PHP/' . phpversion();
                         mail($to, $subject, $message, $headers);
 
+                        $response = new stdClass();
                         $response->code = 1;
                         $response->message = "Registered successfully!";
                     
@@ -146,6 +150,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
                     }
                 }
 
+                $response = new stdClass();
                 $response->code = -1;
                 $response->message = $message;
 
@@ -175,6 +180,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
                         'X-Mailer: PHP/' . phpversion();
                     mail($to, $subject, $message, $headers);
 
+                    $response = new stdClass();
                     $response->code = 1;
                     $response->message = "Verification email successfully resent!";
 
@@ -185,6 +191,8 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
                     die($response_json);
                 }
             }
+
+            $response = new stdClass();
             $response->code = -1;
             $response->message = "Verification email was not resent!";
 
@@ -221,6 +229,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
                 }
             }
                 
+            $response = new stdClass();
             $response->code = 0;
             $response->message = "If $email is registered, we sent reset link to it!";
 
@@ -231,6 +240,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
             die($response_json);
         }
     } else {
+        $response = new stdClass();
         $response->code = -3;
         $response->message = "Sorry, but you seem to be a robot. And we definitelly do not want one here.";
 
@@ -241,6 +251,7 @@ if (isset($_POST["recaptcha_token"]) || isset($_GET["recaptcha_token"])) {
         die($response_json);
     }
 }
+$response = new stdClass();
 $response->code = -1;
 $response->message = "Missing required parameter!";
 

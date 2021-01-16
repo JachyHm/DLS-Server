@@ -107,6 +107,7 @@ session_start();
                                     $('#profile-name').val(data.content.realname);
                                     $('#profile-email').val(data.content.email);
                                     $('#profile-password').val('');
+                                    window.location.replace('/');
                                 }
                             }
                         });
@@ -339,15 +340,18 @@ session_start();
         });
         function logOut() {
             var xhr = new XMLHttpRequest();
+            xhr.onload = function(oEvent) {
+                window.location.replace('/');
+            };
             xhr.open('GET', 'api/login', true);
             xhr.send();
-            $('#logged-text').html();
+            /*$('#logged-text').html();
             $('#login-button').show();
             $('#register-button').show();
             $('#become-author-button').hide();
             $('#logged-button').hide();
             $('#packages-button').hide();
-            $('#admin-button').hide();
+            $('#admin-button').hide();*/
         }
         function resendEmail() {
             $.get('api/register?resend&email='+$("#login-username").val(), function(data) {
@@ -704,7 +708,7 @@ session_start();
     </div>
     <footer>
     <p class="text-light" style="margin: auto">
-        © Zdendaki.net &amp; JachyHm.cz 2020 | <a href="mailto:support@jachyhm.cz" class="text-light">support@jachyhm.cz</a>
+        © Zdendaki.net &amp; JachyHm.cz <?php echo date("Y"); ?> | <a href="mailto:support@jachyhm.cz" class="text-light">support@jachyhm.cz</a>
     </p>
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"

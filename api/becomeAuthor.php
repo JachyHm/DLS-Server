@@ -10,6 +10,7 @@ function flushResponse($code, $message)
 {
     header('Content-type: application/json');
 
+    $response = new stdClass();
     $response->code = $code;
     $response->message = $message;
 
@@ -30,7 +31,7 @@ function successMessage($message) {
     die();
 }
 
-#flushResponse(-1, "Not implemented yet!");
+//flushResponse(-1, "Not implemented yet!");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_SESSION["logged"]) && isset($_SESSION["userid"]) && isset($_POST["recaptcha_token"]) && isset($_POST["userid"]) && isset($_POST["realname"]) && isset($_POST["about"])) {

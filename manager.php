@@ -1,12 +1,12 @@
 <?php
 if (!isset($_SESSION["logged"]) || !$_SESSION["logged"]) {
-    $_SESSION["errorMessage"] = "You have to be logged in to modify packages!";
+    $_SESSION["errorMessage"] = "You have to be logged in to upload packages!";
     echo("<script> window.location.replace('.') </script>");
     die();
 }
 
 if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
-    $_SESSION["errorMessage"] = "You don't have permitions to modify packages!";
+    $_SESSION["errorMessage"] = "You don't have permitions to upload packages!";
     echo("<script> window.location.replace('.') </script>");
     die();
 }

@@ -109,25 +109,28 @@
             </div>
         </div>
         <div class="form-row col" id="searchBy">
+            <div style="padding: 5px">
+                Keyword is contained in
+            </div>
             <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" value="0" name="searchBy" id="searchBy1" checked>
-                <label class="form-check-label" for="searchBy1">By package name</label>
+                <label class="form-check-label" for="searchBy1">package name</label>
             </div>
             <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" value="1" name="searchBy" id="searchBy2">
-                <label class="form-check-label" for="searchBy2">By author</label>
+                <label class="form-check-label" for="searchBy2">author name</label>
             </div>
             <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" value="2" name="searchBy" id="searchBy3">
-                <label class="form-check-label" for="searchBy3">By description</label>
+                <label class="form-check-label" for="searchBy3">description</label>
             </div>
             <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" value="3" name="searchBy" id="searchBy4">
-                <label class="form-check-label" for="searchBy4">By ID</label>
+                <label class="form-check-label" for="searchBy4">ID</label>
             </div>
             <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" value="4" name="searchBy" id="searchBy5">
-                <label class="form-check-label" for="searchBy5">By included file</label>
+                <label class="form-check-label" for="searchBy5">included file</label>
             </div>
         </div>
     </form>

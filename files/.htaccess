@@ -1,3 +1,0 @@
-Options +FollowSymLinks
-RewriteEngine On
-RewriteRule ^(.*)$ https://dls.rw.jachyhm.cz [R=301,L]

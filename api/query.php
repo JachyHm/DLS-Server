@@ -3,6 +3,7 @@ require "../dls_db.php";
 
 function flushResponse($code, $message, $body, $mysqli) 
 {
+    $response = new stdClass();
     $response->code = $code;
     $response->message = $message;
     $response->content = $body;
@@ -63,6 +64,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
                 if ($queryResult->num_rows > 0) {
                     $row = $queryResult->fetch_assoc();
 
+                    $package = new stdClass();
                     $package->id = $package_id;
                     $package->file_name = $row["original_file_name"];
                     $package->display_name = $row["display_name"];
@@ -161,6 +163,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
         if ($queryResult->num_rows > 0) {
             $row = $queryResult->fetch_assoc();
 
+            $package = new stdClass();
             $package->id = $package_id;
             $package->file_name = $row["original_file_name"];
             $package->display_name = $row["display_name"];
@@ -225,7 +228,6 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
             array_push($query_array, "%".$keyword."%");
             break;
         case 1:
-            //TODO: convert author name to ID!!!
             $sql = $mysqli->prepare('SELECT `id` FROM `users` WHERE `nickname` LIKE ?;');
             $_ = "%".$keyword."%";
             $sql->bind_param('s', $_);
@@ -322,8 +324,11 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
     //print_r('SELECT `package_list`.`id`, `display_name`, `version`, `description`, `owner`, `users`.`nickname` AS `author`, `categories`.`text` AS `category`, `eras`.`text` AS `era`, `countries`.`text` AS `country` FROM `package_list` LEFT JOIN `users` ON `package_list`.`owner` = `users`.`id` LEFT JOIN `categories` ON `package_list`.`category` = `categories`.`id` LEFT JOIN `eras` ON `package_list`.`era` = `eras`.`id` LEFT JOIN `countries` ON `package_list`.`country` = `countries`.`id` WHERE '.$query.';');
     if (strlen($query) > 0) {
         $sql = $mysqli->prepare('SELECT `package_list`.`id`, `display_name`, `version`, `description`, `owner`, `users`.`nickname` AS `author`, `categories`.`text` AS `category`, `eras`.`text` AS `era`, `countries`.`text` AS `country` FROM `package_list` LEFT JOIN `users` ON `package_list`.`owner` = `users`.`id` LEFT JOIN `categories` ON `package_list`.`category` = `categories`.`id` LEFT JOIN `eras` ON `package_list`.`era` = `eras`.`id` LEFT JOIN `countries` ON `package_list`.`country` = `countries`.`id` WHERE '.$query.';');
-        array_unshift($query_array, $query_pattern);
-        call_user_func_array(array($sql,'bind_param'), $query_array);
+        if (count($query_array) > 0) {
+            $sql->bind_param($query_pattern, ...$query_array);
+            /*array_unshift($query_array, $query_pattern);
+            call_user_func_array(array($sql,'bind_param'), $query_array);*/
+        }
     } else {
         $sql = $mysqli->prepare('SELECT `package_list`.`id`, `display_name`, `version`, `description`, `owner`, `users`.`nickname` AS `author`, `categories`.`text` AS `category`, `eras`.`text` AS `era`, `countries`.`text` AS `country` FROM `package_list` LEFT JOIN `users` ON `package_list`.`owner` = `users`.`id` LEFT JOIN `categories` ON `package_list`.`category` = `categories`.`id` LEFT JOIN `eras` ON `package_list`.`era` = `eras`.`id` LEFT JOIN `countries` ON `package_list`.`country` = `countries`.`id`;');
     }
@@ -440,7 +445,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
     }
     $packages = explode(",", $packages_string);
 
-    $result = array();
+    $result = new stdClass();
     foreach ($packages as $package) {
         $sql = $mysqli->prepare('SELECT `version` FROM `package_list` WHERE `id` = ?;');
         $sql->bind_param("i", $package);
@@ -450,7 +455,7 @@ if (isset($_GET["file"]) || isset($_POST["file"])) {
             if (!empty($queryResult)) {
                 if ($queryResult->num_rows > 0) {
                     $row = $queryResult->fetch_assoc();
-                    $result[$package] = $row["version"];
+                    $result->$package = $row["version"];
                 }
             }
         }

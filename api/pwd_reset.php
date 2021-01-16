@@ -15,11 +15,20 @@ if (isset($_POST["t"]) && isset($_POST["password"])) {
         );
         $context  = stream_context_create($options);
         $result = json_decode(file_get_contents($url, false, $context));
+        
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) { //check ip from share internet
+            $ip=$_SERVER['HTTP_CLIENT_IP'];
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { //to check ip is pass from proxy
+            $ip=$_SERVER['HTTP_X_FORWARDED_FOR'];
+        } else {
+            $ip=$_SERVER['REMOTE_ADDR'];
+        }
     
         if ($result && $result->success && $result->score > 0.5 && $result->action == "pwd_reset" && $result->hostname == "dls.rw.jachyhm.cz") {
             header('Content-type: application/json');
             $pwd = trim($_POST["password"]);
             if (empty($_POST["t"])) {
+                $response = new stdClass();
                 $response->code = -1;
                 $response->message = "Pasword reset token already expired or not valid!";
             
@@ -30,6 +39,7 @@ if (isset($_POST["t"]) && isset($_POST["password"])) {
                 die($response_json);
             }
             if (empty($pwd)) {
+                $response = new stdClass();
                 $response->code = -1;
                 $response->message = "Pasword can not be empty!";
             
@@ -55,10 +65,11 @@ if (isset($_POST["t"]) && isset($_POST["password"])) {
                     $sql = $mysqli->prepare('DELETE FROM `pwd_resets` WHERE `token` = ?;');
                     $sql->bind_param('s', $_POST["t"]);
                     $sql->execute();
-                    db_log(13, true, $row["id"], $ip, $_POST["t"], "Password changed!", $mysqli);
+                    db_log(13, true, $row["user_id"], $ip, $_POST["t"], "Password changed!", $mysqli);
                 }
             }
                     
+            $response = new stdClass();
             $response->code = 1;
             $response->message = "Pasword changed successfully!";
 
@@ -67,6 +78,7 @@ if (isset($_POST["t"]) && isset($_POST["password"])) {
             $mysqli->close();
             die($response_json);
         } else {
+            $response = new stdClass();
             $response->code = -3;
             $response->message = "Sorry, but you seem to be a robot. And we definitelly do not want one here.";
     
@@ -77,6 +89,7 @@ if (isset($_POST["t"]) && isset($_POST["password"])) {
             die($response_json);
         }
     } else {
+        $response = new stdClass();
         $response->code = -1;
         $response->message = "Missing required parameter!";
     

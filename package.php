@@ -463,7 +463,6 @@ if (isset($_SESSION["logged"]) && $_SESSION["logged"] && ($author_id == $_SESSIO
                                 <select class="form-control" id="owner" name="owner" required>
                                     <?php
                                     $sql = $mysqli->prepare('SELECT `id`, `nickname` FROM `users` WHERE `privileges` > 0 ORDER BY `nickname`;');
-                                    $sql->bind_param('i', $package_id);
                                     $sql->execute();
                                     $queryResult = $sql->get_result();
 

@@ -5,6 +5,7 @@ $files_folder = '../files/'; // upload directory
 
 function flushResponse($code, $message, $body, $mysqli) 
 {
+    $response = new stdClass();
     $response->code = $code;
     $response->message = $message;
     $response->content = $body;
@@ -73,8 +74,8 @@ try {
 
                         $files = $dlc->IncludedFiles;
 
-                        $sql = $mysqli->prepare('INSERT INTO `package_list` (`file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`, `steam_dev`) VALUES (?, ?, 8, -1, -1, -1, -2, ?, ?, "", 1, ?, "Unknown") ON DUPLICATE KEY UPDATE `id` = `id`;');
-                        $sql->bind_param('ssssi', $store_page, $display_name, $release_date, $description, $id);
+                        $sql = $mysqli->prepare('INSERT INTO `package_list` (`file_name`, `original_file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`, `steam_dev`) VALUES (?, ?, ?, 8, -1, -1, -1, -2, ?, ?, "", 1, ?, "Unknown") ON DUPLICATE KEY UPDATE `id` = `id`;');
+                        $sql->bind_param('sssssi', $store_page, $store_page, $display_name, $release_date, $description, $id);
                         $sql->execute();
 
                         $package_id = $mysqli->insert_id;
@@ -108,8 +109,8 @@ try {
                 
                         $files = $dlc->IncludedFiles;
                 
-                        $sql = $mysqli->prepare('INSERT INTO `package_list` (`file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`, `steam_dev`) VALUES (?, ?, 8, -1, -1, -1, -2, ?, ?, "", 1, ?, ?) ON DUPLICATE KEY UPDATE `id` = `id`;');
-                        $sql->bind_param('ssssis', $store_page, $display_name, $release_date, $description, $id, $steam_dev_link);
+                        $sql = $mysqli->prepare('INSERT INTO `package_list` (`file_name`, `original_file_name`, `display_name`, `category`, `era`, `country`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`, `steam_dev`) VALUES (?, ?, ?, 8, -1, -1, -1, -2, ?, ?, "", 1, ?, ?) ON DUPLICATE KEY UPDATE `id` = `id`;');
+                        $sql->bind_param('sssssis', $store_page, $store_page, $display_name, $release_date, $description, $id, $steam_dev_link);
                         $sql->execute();
                 
                         $package_id = $mysqli->insert_id;

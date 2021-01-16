@@ -1,7 +1,7 @@
 <?php
 header('Content-type: application/json');
 
-$max_size = 500 * 1024 * 1024; // max file size (500mb)
+$max_size = 2 * 1024 * 1024 * 1024; // max file size (2 GB)
 $files_folder = '../files/'; // upload directory
 
 session_start();
@@ -65,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     }
 
                                     if (!$actualisation) {
+                                        $response = new stdClass();
                                         $response->code = -1;
                                         $response->message = "No package to update!";
                                         
@@ -85,6 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         $row = $queryResult->fetch_assoc();
                                         if ($actualisation) {
                                             if ($package_id != $row["id"]) {
+                                                $response = new stdClass();
                                                 $response->code = -1;
                                                 $response->message = "Fatal error! Another package with this name already exists. Please rename your package.";
                                                 
@@ -96,9 +98,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         } else if ($row["owner"] == $userid) {
                                             $package_id = $row["id"];
                                             $old_version = $row["version"];
-                                            $old_filename = $row["name"];
+                                            $old_filename = $row["file_name"];
                                             $actualisation = true;
                                         } else {
+                                            $response = new stdClass();
                                             $response->code = -1;
                                             $response->message = "Package with such name already exists from another author! Please rename your package before proceeding. If you are trying to update it, please login to corresponding account.";
                                             
@@ -137,7 +140,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         } else {
                                             $fname = $target_path.$dir.$basename;
                                         }
-                                        array_push($files, str_replace('\\', '/', $fname));
+                                        $fname = str_replace('\\', '/', $fname);
+                                        if (!in_array($fname, $files)) {
+                                            array_push($files, $fname);
+                                        }
                                     }
                                 }
 
@@ -202,8 +208,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 imagepng($image_p, $filename);
                                             }
                                             
+                                            $response = new stdClass();
                                             $response->code = 1;
                                             $response->message = "File uploaded successfully!";
+                                            $response->content = new stdClass();
                                             $response->content->package_id = $package_id;
                                             
                                             $response_json = json_encode($response);
@@ -214,6 +222,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         }
 
                                         $e = $mysqli->error;
+
+                                        $response = new stdClass();
                                         $response->code = -1;
                                         $response->message = "Writing file to database failed with following: ".$e."!";
                                         
@@ -233,6 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         die($response_json);
                                     }
                                 } else {
+                                    $response = new stdClass();
                                     $response->code = 99;
                                     $response->message = "Your file is including folowing files already included in another package! Please remove this conflict before uploading again.";
                                     $response->multipleFiles = $multiple_files;
@@ -244,6 +255,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     die($response_json);
                                 }
                             } else {
+                                $response = new stdClass();
                                 $response->code = -1;
                                 $response->message = "Upload failed! Exceeded max file size!";
                                 
@@ -254,6 +266,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 die($response_json);
                             }
                         } else {
+                            $response = new stdClass();
                             $response->code = -1;
                             $response->message = "Upload failed! Unable to upload file!";
                             
@@ -264,6 +277,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             die($response_json);
                         }
                     } else {
+                        $response = new stdClass();
                         $response->code = -1;
                         $response->message = "Target path must be valid Windows folderpath from Assets folder!";
                         
@@ -274,6 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         die($response_json);
                     }
                 } else {
+                    $response = new stdClass();
                     $response->code = -1;
                     $response->message = "Not all parameters set!";
                     
@@ -284,6 +299,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     die($response_json);
                 }
             } else {
+                $response = new stdClass();
                 $response->code = -1;
                 $response->message = "Uploaded file must be *.zip!";
                 
@@ -294,6 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 die($response_json);
             }
         } else {
+            $response = new stdClass();
             $response->code = -1;
             $response->message = "Not enough privileges to upload!";
             
@@ -304,6 +321,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             die($response_json);
         }
     } else {
+        $response = new stdClass();
         $response->code = -1;
         $response->message = "Only logged users can upload!";
         
@@ -312,6 +330,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die($response_json);
     }
 } else {
+    $resposne = new stdClass();
     $response->code = -1;
     $response->message = "Bad request!";
     

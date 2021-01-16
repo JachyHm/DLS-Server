@@ -13,6 +13,7 @@ $_SESSION["token"] = null;
 
 function flushResponse($code, $message, $body, $mysqli) 
 {
+    $response = new stdClass();
     $response->code = $code;
     $response->message = $message;
     $response->content = $body;
@@ -98,6 +99,7 @@ if (isset($_POST["email"]) && isset($_POST["password"])) {
                         $sql->bind_param('is', $userid, $token);
                         $sql->execute();
 
+                        $content = new stdClass();
                         $content->userid = $row["id"];
                         $content->realname = $row["nickname"];
                         $content->email = $row["email"];
