@@ -149,7 +149,7 @@ if (!empty($queryResult)) {
                 if (req.status == 200) {
                     var data = req.response;
                     resetProgress();
-                    if (data.code < 0) {
+                    if (data.code < 200 || data.code > 299) {
                         $("#error-content").html(data.message);
                         $("#error").modal("show");
                         clearTimeout(errorTimeout);
@@ -180,7 +180,7 @@ if (!empty($queryResult)) {
             req.onload = function(oEvent) {
                 if (req.status == 200) {
                     var data = req.response;
-                    if (data.code < 0) {
+                    if (data.code < 200 || data.code > 299) {
                         $("#search-error").html(data.message);
                         $("#search-error").fadeIn();
                         clearTimeout(errorTimeout);

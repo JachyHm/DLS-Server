@@ -6,17 +6,11 @@ $files_folder = '../files/'; // upload directory
 
 session_start();
 
+require "../dls_db.php";
+require "utils.php";
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_SESSION["logged"]) && $_SESSION["logged"] && isset($_SESSION["userid"])) {
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) { //check ip from share internet
-            $ip=$_SERVER['HTTP_CLIENT_IP'];
-        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { //to check ip is pass from proxy
-            $ip=$_SERVER['HTTP_X_FORWARDED_FOR'];
-        } else {
-            $ip=$_SERVER['REMOTE_ADDR'];
-        }
-
-        include "../dls_db.php";
         if (isset($_SESSION["privileges"]) && $_SESSION["privileges"] > 0) {
             $userid = $_SESSION["userid"];
             if (strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION)) == "zip") {
@@ -32,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     if (!empty($target_path) && preg_match('/^(?:[^?%*:|"><.]+(?:|\/)?)+$/', $target_path)) {
                         if (@is_uploaded_file($_FILES['file']['tmp_name'])) {
-                            if ($_FILES['file']['size'] < $max_size) {                                
+                            if ($_FILES['file']['size'] < $max_size) {
                                 $desc = trim($_POST["description"]);
                                 $display_name = trim($_POST["packageName"]);
                                 $category = $_POST["category"];
@@ -65,14 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     }
 
                                     if (!$actualisation) {
-                                        $response = new stdClass();
-                                        $response->code = -1;
-                                        $response->message = "No package to update!";
-                                        
-                                        $response_json = json_encode($response);
-                                        
                                         db_log(17, false, $userid, $ip, $_SESSION["token"], "No package to update!", $mysqli);
-                                        die($response_json);
+                                        flushResponse(400, "No package to update!", $mysqli);
                                     }
                                 }
 
@@ -86,14 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         $row = $queryResult->fetch_assoc();
                                         if ($actualisation) {
                                             if ($package_id != $row["id"]) {
-                                                $response = new stdClass();
-                                                $response->code = -1;
-                                                $response->message = "Fatal error! Another package with this name already exists. Please rename your package.";
-                                                
-                                                $response_json = json_encode($response);
-                                                
                                                 db_log(17, false, $userid, $ip, $_SESSION["token"], "Another package with this name already exists.!", $mysqli);
-                                                die($response_json);
+                                                flushResponse(409, "Fatal error! Another package with this name already exists. Please rename your package.", $mysqli);
                                             }
                                         } else if ($row["owner"] == $userid) {
                                             $package_id = $row["id"];
@@ -101,14 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             $old_filename = $row["file_name"];
                                             $actualisation = true;
                                         } else {
-                                            $response = new stdClass();
-                                            $response->code = -1;
-                                            $response->message = "Package with such name already exists from another author! Please rename your package before proceeding. If you are trying to update it, please login to corresponding account.";
-                                            
-                                            $response_json = json_encode($response);
-                                            
                                             db_log(17, false, $userid, $ip, $_SESSION["token"], "Another package with this name already exists.!", $mysqli);
-                                            die($response_json);
+                                            flushResponse(403, "Package with such name already exists from another author! Please rename your package before proceeding. If you are trying to update it, please login to corresponding account.", $mysqli);
                                         }
                                     }
                                 }
@@ -157,7 +133,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                 if (!empty($queryResult)) {
                                     if ($queryResult->num_rows > 0) {
-                                        array_push($multiple_files, $queryResult->fetch_assoc());
+                                        while ($row = $querryResult->fetch_assoc()) {
+                                            array_push($multiple_files, $row["fname"]);
+                                        }
                                     }
                                 }
                                 
@@ -207,135 +185,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 imagecopyresampled($image_p, $image, 0, 0, 0, 0, 770, $height, $width_orig, $height_orig);
                                                 imagepng($image_p, $filename);
                                             }
-                                            
-                                            $response = new stdClass();
-                                            $response->code = 1;
-                                            $response->message = "File uploaded successfully!";
-                                            $response->content = new stdClass();
-                                            $response->content->package_id = $package_id;
-                                            
-                                            $response_json = json_encode($response);
-                                            
+
                                             db_log(17, true, $userid, $ip, $_SESSION["token"], "Package $package_id uploaded successfully!", $mysqli);
-                                            $mysqli->close();
-                                            die($response_json);
+                                            flushResponse(200, "File uploaded successfully!", $mysqli);
                                         }
 
                                         $e = $mysqli->error;
-
-                                        $response = new stdClass();
-                                        $response->code = -1;
-                                        $response->message = "Writing file to database failed with following: ".$e."!";
-                                        
-                                        $response_json = json_encode($response);
-                                        
                                         db_log(17, false, $userid, $ip, $_SESSION["token"], "Database error: $e!", $mysqli);
-                                        $mysqli->close();
-                                        die($response_json);
+                                        flushResponse(500, "Writing file to database failed with following: ".$e."!", $mysqli);
                                     } else {
-                                        $response->code = -1;
-                                        $response->message = "Upload failed! Unable to move uploaded file to target directory!";
-                                        
-                                        $response_json = json_encode($response);
-                                        
                                         db_log(17, false, $userid, $ip, $_SESSION["token"], "Unable to move file to target!", $mysqli);
-                                        $mysqli->close();
-                                        die($response_json);
+                                        flushResponse(500, "Upload failed! Unable to move uploaded file to target directory!", $mysqli);
                                     }
                                 } else {
-                                    $response = new stdClass();
-                                    $response->code = 99;
-                                    $response->message = "Your file is including folowing files already included in another package! Please remove this conflict before uploading again.";
-                                    $response->multipleFiles = $multiple_files;
-                                    
-                                    $response_json = json_encode($response);
-
                                     db_log(17, false, $userid, $ip, $_SESSION["token"], "Files from another package included!", $mysqli);
-                                    $mysqli->close();
-                                    die($response_json);
+                                    flushResponse(409, "Your file is including folowing files already included in another package! Please remove this conflict before uploading again.", $mysqli);
                                 }
                             } else {
-                                $response = new stdClass();
-                                $response->code = -1;
-                                $response->message = "Upload failed! Exceeded max file size!";
-                                
-                                $response_json = json_encode($response);
-                                
                                 db_log(17, false, $userid, $ip, $_SESSION["token"], "Max file size exceeded!", $mysqli);
-                                $mysqli->close();
-                                die($response_json);
+                                flushResponse(413, "File too large!", $mysqli);
                             }
                         } else {
-                            $response = new stdClass();
-                            $response->code = -1;
-                            $response->message = "Upload failed! Unable to upload file!";
-                            
-                            $response_json = json_encode($response);
-                            
                             db_log(17, false, $userid, $ip, $_SESSION["token"], "Unable to upload file!", $mysqli);
-                            $mysqli->close();
-                            die($response_json);
+                            flushResponse(500, "Upload failed! Unable to upload file!", $mysqli);
                         }
                     } else {
-                        $response = new stdClass();
-                        $response->code = -1;
-                        $response->message = "Target path must be valid Windows folderpath from Assets folder!";
-                        
-                        $response_json = json_encode($response);
-                        
                         db_log(17, false, $userid, $ip, $_SESSION["token"], "Target path is not valid!", $mysqli);
-                        $mysqli->close();
-                        die($response_json);
+                        flushResponse(400, "Target path must be valid Windows folderpath from Assets folder!", $mysqli);
                     }
-                } else {
-                    $response = new stdClass();
-                    $response->code = -1;
-                    $response->message = "Not all parameters set!";
-                    
-                    $response_json = json_encode($response);
-                    
+                } else {                    
                     db_log(17, false, $userid, $ip, $_SESSION["token"], "Not all parameters set!", $mysqli);
-                    $mysqli->close();
-                    die($response_json);
+                    flushResponse(400, "Not all parameters set!", $mysqli);
                 }
             } else {
-                $response = new stdClass();
-                $response->code = -1;
-                $response->message = "Uploaded file must be *.zip!";
-                
-                $response_json = json_encode($response);
-                
                 db_log(17, false, $userid, $ip, $_SESSION["token"], "File is not zip!", $mysqli);
-                $mysqli->close();
-                die($response_json);
+                flushResponse(415, "Uploaded file must be *.zip!", $mysqli);
             }
         } else {
-            $response = new stdClass();
-            $response->code = -1;
-            $response->message = "Not enough privileges to upload!";
-            
-            $response_json = json_encode($response);
-            
-            db_log(17, false, $userid, $ip, $_SESSION["token"], "Not enough privileges to upload!", $mysqli);
-            $mysqli->close();
-            die($response_json);
+            db_log(17, false, -1, $ip, $_SESSION["token"], "Not enough privileges to upload!", $mysqli);
+            flushResponse(403, "Not enough privileges to upload!", $mysqli);
         }
     } else {
-        $response = new stdClass();
-        $response->code = -1;
-        $response->message = "Only logged users can upload!";
-        
-        $response_json = json_encode($response);
-        
-        die($response_json);
+        db_log(17, false, -1, $ip, $_SESSION["token"], "You have to be logged in to upload!", $mysqli);
+        flushResponse(403, "You have to be logged in to upload!", $mysqli);
     }
 } else {
-    $resposne = new stdClass();
-    $response->code = -1;
-    $response->message = "Bad request!";
-    
-    $response_json = json_encode($response);
-    
-    die($response_json);
+    flushResponse(405, "Protocol not supported!", $mysqli);
 }
 ?>

@@ -2,6 +2,7 @@
 session_start();
 
 require "../dls_db.php";
+require "utils.php";
 
 function getResponse($url, &$response = null)
 {
@@ -19,10 +20,13 @@ function getResponse($url, &$response = null)
     return $response_code;
 }
 
-function raiseError($message) {
+function raiseError($message) 
+{
     $_SESSION["errorMessage"] = $message;
     if (isset($_POST["package_id"])) {
         header("Location: ../?package=".$_POST["package_id"]);
+    } else if (isset($_GET["package_id"])) {
+        header("Location: ../?package=".$_GET["package_id"]);
     } else {
         header("Location: ../");
     }
@@ -88,8 +92,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             array_push($query_array, $package_id);
 
             $sql = $mysqli->prepare($query);
-            array_unshift($query_array, $query_pattern);
-            call_user_func_array(array($sql,'bind_param'), $query_array);
+            $sql->bind_param($query_pattern, ...$query_array);
+            //array_unshift($query_array, $query_pattern);
+            //call_user_func_array(array($sql,'bind_param'), $query_array);
 
             if ($sql->execute()) {
                 if ($target_path == "") {
@@ -97,8 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $sql->bind_param('si', $_POST["target_path"], $package_id);
                     $sql->execute();
                 } else {
-                    $sql = $mysqli->prepare('UPDATE `file_list` SET `fname` = REPLACE(`fname`, ?, ?) WHERE `package_id` = ?;');
-                    $sql->bind_param('ssi', $target_path, $_POST["target_path"], $package_id);
+                    $sql = $mysqli->prepare('UPDATE `file_list` SET `fname` = STUFF(`fname`, CHARINDEX(?, `fname`), LEN(?), ?) WHERE `package_id` = ?;');
+                    $sql->bind_param('sssi', $target_path, $target_path, $_POST["target_path"], $package_id);
                     $sql->execute();
                 }
 
@@ -238,7 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 raiseError("$steamappid isn't Train Simulator DLC!");
             }
-            raiseError("Refreshing Steam DLC failed!");
+            raiseError("Refreshing Steam DLC query for \"$url\" failed with: $response_code!");
         } else {
             raiseError("Missing required parameters!");
         }
@@ -246,14 +251,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         raiseError("Only logged users can change packages!");
     }
 } else {
-    header('Content-type: application/json');
-
-    $response = new stdClass();
-    $response->code = -1;
-    $response->message = "Bad request!";
-    
-    $response_json = json_encode($response);
-    
-    die($response_json);
+    flushResponse(405, "Protocol not supported!", $mysqli);
 }
 ?>

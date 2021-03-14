@@ -1,23 +1,11 @@
 <?php
 require "../dls_db.php";
+require "utils.php";
 
 $max_size = 5 * 1024 * 1024; // max file size (5mb)
 $files_folder = '../files/requests_images/'; // upload directory
 
 session_start();
-
-function flushResponse($code, $message) 
-{
-    header('Content-type: application/json');
-
-    $response = new stdClass();
-    $response->code = $code;
-    $response->message = $message;
-
-    $response_json = json_encode($response);
-    
-    die($response_json);
-}
 
 function raiseError($message) {
     $_SESSION["errorMessage"] = $message;
@@ -31,19 +19,9 @@ function successMessage($message) {
     die();
 }
 
-//flushResponse(-1, "Not implemented yet!");
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_SESSION["logged"]) && isset($_SESSION["userid"]) && isset($_POST["recaptcha_token"]) && isset($_POST["userid"]) && isset($_POST["realname"]) && isset($_POST["about"])) {
         if ($_SESSION["userid"] == $_SESSION["userid"]) {
-            if (!empty($_SERVER['HTTP_CLIENT_IP'])) { //check ip from share internet
-                $ip=$_SERVER['HTTP_CLIENT_IP'];
-            } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { //to check ip is pass from proxy
-                $ip=$_SERVER['HTTP_X_FORWARDED_FOR'];
-            } else {
-                $ip=$_SERVER['REMOTE_ADDR'];
-            }
-
             $url = 'https://www.google.com/recaptcha/api/siteverify';
             $data = array('secret' => $captcha_secret, 'response' => $_POST["recaptcha_token"]);
             $options = array(
@@ -57,8 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = json_decode(file_get_contents($url, false, $context));
             if (!$result || !$result->success || $result->score < 0.5 || $result->action != "claim_author" || $result->hostname != "dls.rw.jachyhm.cz") {
                 db_log(18, false, -1, $ip, $_POST["userid"], "ReCaptcha failed!", $mysqli);
-                $mysqli->close();
-                flushResponse(-1, "Sorry, but you seem to be a robot. And we definitelly do not want one here.", new stdClass(), $mysqli);
+                flushResponse(403, "Sorry, but you seem to be a robot. And we definitelly do not want one here.", $mysqli);
             }
 
             if ($_SESSION["logged"]) {
@@ -73,8 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!empty($queryResult)) {
                         if ($queryResult->num_rows > 0) {
                             db_log(18, false, $userid, $ip, $_SESSION["token"], "There already is another open request for this user!", $mysqli);
-                            $mysqli->close();
-                            flushResponse(-1, "You already have another open request!");
+                            flushResponse(409, "You already have another open request!", $mysqli);
                         }
                     }
 
@@ -86,18 +62,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $filename = bin2hex(random_bytes(16)).".".pathinfo($_FILES['images']['name'][$i], PATHINFO_EXTENSION);
                                 $target_path = $files_folder.$filename;
                                 if (!move_uploaded_file($tmpName, $target_path)) {
-                                    $mysqli->close();
-                                    flushResponse(-1, "Critical error, unable to move file to target location!");
+                                    flushResponse(500, "Critical error, unable to move file to target location!", $mysqli);
                                 }
                                 $files[$i] = $filename;
                                 $i++;
                             } else {
-                                $mysqli->close();
-                                flushResponse(-1, "Max file size exceeded!");
+                                flushResponse(413, "Max file size exceeded!", $mysqli);
                             }
                         } else {
-                            $mysqli->close();
-                            flushResponse(-1, "Unknown error during upload!");
+                            flushResponse(500, "Unknown error during upload!", $mysqli);
                         }
                     }
 
@@ -489,7 +462,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 <!--[if mso]><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"padding-right: 10px; padding-left: 10px; padding-top: 10px; padding-bottom: 10px; font-family: Tahoma, Verdana, sans-serif\"><![endif]-->
                                                 <div style=\"color:#b9b9b9;font-family:'Roboto', Tahoma, Verdana, Segoe, sans-serif;line-height:1.2;padding-top:10px;padding-right:10px;padding-bottom:10px;padding-left:10px;\">
                                                     <div style=\"line-height: 1.2; font-size: 12px; color: #b9b9b9; font-family: 'Roboto', Tahoma, Verdana, Segoe, sans-serif; mso-line-height-alt: 14px;\">
-                                                        <p style=\"font-size: 14px; line-height: 1.2; word-break: break-word; text-align: center; mso-line-height-alt: 17px; margin: 0;\">This e-mail was generated automatically. Please do not respond to them.
+                                                        <p style=\"font-size: 14px; line-height: 1.2; word-break: break-word; text-align: center; mso-line-height-alt: 17px; margin: 0;\">This e-mail was generated automatically. Please do not respond to it.
                                                         </p>
                                                     </div>
                                                 </div>
@@ -513,7 +486,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </html>";
 
                     if (!empty($queryResult)) {
-                        while ($mail = $queryResult->fetch_assoc()["email"]) {
+                        while ($row = $queryResult->fetch_assoc()) {
+                            $mail    = $row["email"];
                             $to      = $mail;
                             $subject = 'New author request awaits confirmation';
                             $message = $message_start . $images . $message_end;
@@ -524,75 +498,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'X-Mailer: PHP/' . phpversion();
                             mail($to, $subject, $message, $headers);
                         }
+                        $to      = "postman@jachyhm.cz";
+                        $subject = 'New author request awaits confirmation';
+                        $message = $message_start . $images . $message_end;
+                        $headers  = 'MIME-Version: 1.0' . "\r\n";
+                        $headers .= 'Content-type: text/html; charset=utf-8' . "\r\n";
+                        $headers .= 'From: RailWorks download station <dls.rw@jachyhm.cz>' . "\r\n" .
+                            'Reply-To: noreply@jachyhm.cz' . "\r\n" .
+                            'X-Mailer: PHP/' . phpversion();
+                        mail($to, $subject, $message, $headers);
                     }
 
                     db_log(18, true, $userid, $ip, $_SESSION["token"], "Request successfully submited!", $mysqli);
-                    $mysqli->close();
-                    flushResponse(1, "Request successfully submited!");
+                    flushResponse(200, "Request successfully submited!", $mysqli);
                 } else {
                     db_log(18, false, $userid, $ip, $_SESSION["token"], "You already have privileges to upload!", $mysqli);
-                    $mysqli->close();
-                    flushResponse(-1, "You already have privileges to upload!");
+                    flushResponse(409, "You already have privileges to upload!", $mysqli);
                 }
             } else {
-                $mysqli->close();
-                flushResponse(-1, "Only logged users can perform author request!");
+                flushResponse(403, "Only logged users can perform author request!", $mysqli);
             }
         } else {
-            flushResponse(-1, "Parameters mismatch!");
+            flushResponse(400, "Parameters mismatch!", $mysqli);
         }
     } else {
-        flushResponse(-1, "Not all parameters set!");
+        flushResponse(400, "Not all parameters set!", $mysqli);
     }
 } else if ($_SERVER["REQUEST_METHOD"] === 'GET') {
-    if (isset($_GET["t"]) && isset($_GET["action"]) && isset($_SESSION["logged"])) {
-        $token = $_GET["t"];
-        if ($_SESSION["logged"]) {
-            if ($_SESSION["privileges"] > 1) {
-                $sql = $mysqli->prepare('SELECT * FROM `become_author_requests` LEFT JOIN `users` ON `become_author_requests`.`user_id` = `users`.`id` WHERE `become_author_requests`.`token` = ?;');
-                $sql->bind_param('s', $token);
-                $sql->execute();
-                $queryResult = $sql->get_result();
+    if (isset($_GET["t"]) && isset($_GET["action"])) {
+        if (isset($_SESSION["logged"])) {
+            $token = $_GET["t"];
+            if ($_SESSION["logged"]) {
+                if ($_SESSION["privileges"] > 1) {
+                    $sql = $mysqli->prepare('SELECT * FROM `become_author_requests` LEFT JOIN `users` ON `become_author_requests`.`user_id` = `users`.`id` WHERE `become_author_requests`.`token` = ?;');
+                    $sql->bind_param('s', $token);
+                    $sql->execute();
+                    $queryResult = $sql->get_result();
 
-                if (!empty($queryResult) && $queryResult->num_rows > 0) {
-                    $row = $queryResult->fetch_assoc();
+                    if (!empty($queryResult) && $queryResult->num_rows > 0) {
+                        $row = $queryResult->fetch_assoc();
 
-                    if ($row["closed"] === 0) {
-                        $action = $_GET["action"];
-                        $username = $row["nickname"];
-                        if ($action == "approve") {
-                            $sql = $mysqli->prepare('UPDATE `become_author_requests` SET `closed` = 1, `success` = 1 WHERE `token` = ?;');
-                            $sql->bind_param('s', $token);
-                            $sql->execute();
+                        if ($row["closed"] === 0) {
+                            $action = $_GET["action"];
+                            $username = $row["nickname"];
+                            if ($action == "approve") {
+                                $sql = $mysqli->prepare('UPDATE `become_author_requests` SET `closed` = 1, `success` = 1 WHERE `token` = ?;');
+                                $sql->bind_param('s', $token);
+                                $sql->execute();
 
-                            $sql = $mysqli->prepare('UPDATE `users` SET `privileges` = 1 WHERE `id` = ?;');
-                            $sql->bind_param('i', $row["user_id"]);
-                            $sql->execute();
-                            successMessage("User request for $username succesfully approved!");
-                        } elseif ($action == "deny") {
-                            $sql = $mysqli->prepare('UPDATE `become_author_requests` SET `closed` = 1, `success` = 0 WHERE `token` = ?;');
-                            $sql->bind_param('s', $token);
-                            $sql->execute();
-                            successMessage("User request for $username succesfully denied!");
+                                $sql = $mysqli->prepare('UPDATE `users` SET `privileges` = 1 WHERE `id` = ?;');
+                                $sql->bind_param('i', $row["user_id"]);
+                                $sql->execute();
+                                successMessage("User request for $username succesfully approved!");
+                            } elseif ($action == "deny") {
+                                $sql = $mysqli->prepare('UPDATE `become_author_requests` SET `closed` = 1, `success` = 0 WHERE `token` = ?;');
+                                $sql->bind_param('s', $token);
+                                $sql->execute();
+                                successMessage("User request for $username succesfully denied!");
+                            } else {
+                                $mysqli->close();
+                                raiseError("Invalid action!");
+                            }
                         } else {
-                            raiseError("Invalid action!");
+                            $mysqli->close();
+                            raiseError("This request is already closed!");
                         }
                     } else {
-                        raiseError("This request is already closed!");
+                        $mysqli->close();
+                        raiseError("No such author request found!");
                     }
                 } else {
-                    raiseError("No such author request found!");
+                    $mysqli->close();
+                    raiseError("You have to be at least global moderator to approve author requests!");
                 }
-            } else {
-                raiseError("You have to be at least global moderator to approve author requests!");
             }
-        } else {
-            raiseError("You have to be logged in to approve author requests!");
         }
+        $mysqli->close();
+        raiseError("You have to be logged in to approve author requests!");
     } else {
+        $mysqli->close();
         raiseError("Not all parameters set!");
     }
 } else {
-    flushResponse(-1, "Bad request!");
+    flushResponse(405, "Protocol not supported!", $mysqli);
 }
 ?>

@@ -1,15 +1,8 @@
 <?php
 require "../dls_db.php";
+require "utils.php";
 session_start();
-if (isset($_GET["t"])) {
-    if (!empty($_SERVER['HTTP_CLIENT_IP'])) { //check ip from share internet
-        $ip=$_SERVER['HTTP_CLIENT_IP'];
-    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { //to check ip is pass from proxy
-        $ip=$_SERVER['HTTP_X_FORWARDED_FOR'];
-    } else {
-        $ip=$_SERVER['REMOTE_ADDR'];
-    }
-
+if (isset($_GET["t"]) && !empty(trim($_GET["t"]))) {
     $sql = $mysqli->prepare('SELECT * FROM `users` WHERE `token` = ?;');
     $sql->bind_param('s', $_GET["t"]);
     $sql->execute();
@@ -38,9 +31,9 @@ if (isset($_GET["t"])) {
         }
     }
     db_log(14, false, -1, $ip, $_GET["t"], "Invalid token!", $mysqli);
-    $mysqli->close();
 }
 $_SESSION["errorMessage"] = "Invalid token!";
+$mysqli->close();
 header("Location: ../");
 die();
 ?>

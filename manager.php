@@ -84,10 +84,10 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
                     }
                         
                     req.onload = function(oEvent) {
-                        if (req.status == 200) {
+                        if (req.status >= 200 && req.status <= 299) {
                             var data = req.response;
                             resetProgress();
-                            if (data.code < 0) {
+                            if (data.code < 200 || data.code > 299) {
                                 $("#error-content").html(data.message);
                                 $("#error").modal("show");
                                 clearTimeout(errorTimeout);
@@ -153,10 +153,10 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
             req.responseType = 'json';
                 
             req.onload = function(oEvent) {
-                if (req.status == 200) {
+                if (req.status >= 200 && req.status <= 299) {
                     var data = req.response;
                     resetProgress();
-                    if (data.code < 0) {
+                    if (data.code < 200 || data.code > 299) {
                         $("#search-error").html(data.message);
                         $("#search-error").fadeIn();
                         clearTimeout(errorTimeout);
@@ -195,9 +195,9 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
             req.responseType = 'json';
             
             req.onload = function(oEvent) {
-                if (req.status == 200) {
+                if (req.status >= 200 && req.status <= 299) {
                     var data = req.response;
-                    if (data.code > 0) {
+                    if (data.code > 200 && data.code < 299) {
                         if ($('#isUpdate').is(':checked')) {
                             $('#actualisation').val(data.content.id);
                         } else {

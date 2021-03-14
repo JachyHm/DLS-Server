@@ -1,5 +1,5 @@
 <?php
-$sql = $mysqli->prepare('SELECT * FROM `become_author_requests` RIGHT JOIN `users` ON `become_author_requests`.`user_id` = `users`.`id` WHERE `become_author_requests`.`id` = ?');
+$sql = $mysqli->prepare('SELECT `about`, `email`, `real_name`, `datetime`, `closed`, `become_author_requests`.`token` FROM `become_author_requests` RIGHT JOIN `users` ON `become_author_requests`.`user_id` = `users`.`id` WHERE `become_author_requests`.`id` = ?');
 $sql->bind_param('i', $request_id);
 $sql->execute();
 $queryResult = $sql->get_result();

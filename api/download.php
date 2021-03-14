@@ -1,35 +1,12 @@
 <?php
 require "../dls_db.php";
+require "utils.php";
 session_start();
 
 $files_folder = '../files/'; // upload directory
 
-function flushResponse($code, $message, $body, $mysqli) 
-{
-    header('Content-type: application/json');
-
-    $response = new stdClass();
-    $response->code = $code;
-    $response->message = $message;
-    $response->content = $body;
-
-    $response_json = json_encode($response);
-
-    $mysqli->close();
-    
-    die($response_json);
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (isset($_GET["token"]) && isset($_GET["package_id"])) {
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) { //check ip from share internet
-            $ip=$_SERVER['HTTP_CLIENT_IP'];
-        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { //to check ip is pass from proxy
-            $ip=$_SERVER['HTTP_X_FORWARDED_FOR'];
-        } else {
-            $ip=$_SERVER['REMOTE_ADDR'];
-        }
-
         $token = $_GET["token"];
 
         $sql = $mysqli->prepare('SELECT * FROM `tokens` WHERE `token` = ?;');
@@ -51,15 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                         $fname = $files_folder.$queryResult->fetch_assoc()["file_name"];
                         db_log(15, true, $userid, $ip, $token, "Downloaded $fname!", $mysqli);
 
-                        /*if (is_file("$fname.gz")) {
-                            $gzdata = implode("", "$fname.gz");
-                        } else {
-                            $data = implode("", file($fname));
-                            $gzdata = gzencode($data, 9);
-                            $fp = fopen("$fname.gz", "w");
-                            fwrite($fp, $gzdata);
-                            fclose($fp);
-                        }*/
                         header('Content-Description: File Transfer');
                         header('Content-Type: application/zip');
                         header('Content-Encoding: zip');
@@ -70,23 +38,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                         header('Content-Length: '.filesize($fname));
                         readfile($fname);
                         die();
-                        //header('Content-Type: application/gzip');
-                        //header('Content-Encoding: gzip');
-                        //header('Content-Length: '.strlen($gzdata));
-                        //die($gzdata);
                     }
                 }
 
                 db_log(15, false, $userid, $ip, $token, "No such package $package_id!", $mysqli);
-                flushResponse(-1, "No such package!", new stdClass(), $mysqli);
+                flushResponse(404, "No such package!", $mysqli);
             }
         }
         db_log(15, false, -1, $ip, $token, "Invalid token!", $mysqli);
-        flushResponse(-1, "Invalid token!", new stdClass(), $mysqli);
+        flushResponse(498, "Invalid token!", $mysqli);
     } else {
-        flushResponse(-1, "Bad request!", new stdClass(), $mysqli);
+        flushResponse(400, "Not enough parameters set!", $mysqli);
     }
 } else {
-    flushResponse(-1, "Bad request!", new stdClass(), $mysqli);
+    flushResponse(405, "Protocol not supported!", $mysqli);
 }
 ?>

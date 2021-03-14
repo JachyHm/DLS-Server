@@ -3,6 +3,9 @@
     $(document).ready(function(){
         function performQuery(){
             var query = 'api/query?keyword='+encodeURIComponent($("#keyword").val())+'&searchBy='+$("input[name='searchBy']:checked").val();
+            if (document.getElementById('displayDLCchkbx').checked) {
+                query += '&displayDLC';
+            }
             if ($("#category").val()) {
                 query += '&category='+$("#category").val();
             }
@@ -13,7 +16,7 @@
                 query += '&era='+$("#era").val();
             }
             $.get(query, function(data) {
-                if (data.code < 0) {
+                if (data.code < 200 || data.code > 299) {
                     $("#error-content").html(data.message);
                     $("#error").modal("show");
                     clearTimeout(errorTimeout);
@@ -43,6 +46,10 @@
             onChangeTimer = setTimeout(performQuery, delay);
         });
         $("#searchBy").on('change keyup', function(){
+            clearTimeout(onChangeTimer);
+            onChangeTimer = setTimeout(performQuery, delay);
+        });
+        $("#displayDLC").on('change keyup', function(){
             clearTimeout(onChangeTimer);
             onChangeTimer = setTimeout(performQuery, delay);
         });
@@ -109,7 +116,7 @@
             </div>
         </div>
         <div class="form-row col" id="searchBy">
-            <div style="padding: 5px">
+            <div style="padding: 2px 5px">
                 Keyword is contained in
             </div>
             <div class="form-check form-check-inline">
@@ -131,6 +138,12 @@
             <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" value="4" name="searchBy" id="searchBy5">
                 <label class="form-check-label" for="searchBy5">included file</label>
+            </div>
+        </div>
+        <div class="form-row col" id="displayDLC">
+            <div class="form-check form-check-inline">
+                <label class="form-check-label" for="displayDLCchkbx" style="padding: 0px 5px" >Display DLCs</label>
+                <input class="form-check-input" type="checkbox" id="displayDLCchkbx">
             </div>
         </div>
     </form>

@@ -74,11 +74,11 @@ session_start();
                             },
                             success: function(data)
                             {
-                                if (data.code < 0) {
+                                if (data.code < 200 || data.code > 299) {
                                     clearTimeout(loginErrorTimeout);
                                     $("#login-error").html(data.message).fadeIn();
                                     loginErrorTimeout = setTimeout(function(){$("#login-error").fadeOut();}, 5000);
-                                    if (data.code == -2) {
+                                    if (data.content == -2) {
                                         $("#resend-button").show();
                                     }
                                 } else {
@@ -104,7 +104,8 @@ session_start();
                                     } else {
                                         $('#admin-button').hide();
                                     }
-                                    $('#profile-name').val(data.content.realname);
+                                    //$('#profile-name').val(data.content.realname);
+                                    $('#profile-name').val('');
                                     $('#profile-email').val(data.content.email);
                                     $('#profile-password').val('');
                                     window.location.replace('/');
@@ -133,7 +134,7 @@ session_start();
                             },
                             success: function(data)
                             {
-                                if (data.code < 0) {
+                                if (data.code < 200 || data.code > 299) {
                                     $("#registration-error").html(data.message).fadeIn();
                                     clearTimeout(registrationErrorTimeout);
                                     registrationErrorTimeout = setTimeout(function(){$("#registration-error").fadeOut();}, 5000);
@@ -163,23 +164,23 @@ session_start();
                             data: {
                                 nickname: $("#profile-name").val(),
                                 email: $("#profile-email").val(),
+                                new_password:  $("#profile-new-password").val(),
                                 password:  $("#profile-password").val(),
                                 recaptcha_token: token,
                             },
                             success: function(data)
                             {
-                                if (data.code < 0) {
+                                if (data.code < 200 || data.code > 299) {
                                     $("#profile-error").html(data.message).fadeIn();
                                     clearTimeout(profileErrorTimeout);
                                     profileErrorTimeout = setTimeout(function(){$("#profile-error").fadeOut();}, 5000);
                                 } else {
                                     $("#profile").modal('hide');
-                                    $("#info").modal('show');
-                                    $("#info-content").html(data.message);
-                                    clearTimeout(infoTimeout);
-                                    infoTimeout = setTimeout(function(){$("#info").modal('hide');}, 3000);
-                                    $('#profile-name').val(data.newNick);
-                                    $('#logged-button').html('Logged in: <b>'+data.newNick+'</b>');
+                                    // $("#info").modal('show');
+                                    // $("#info-content").html(data.message);
+                                    // clearTimeout(infoTimeout);
+                                    // infoTimeout = setTimeout(function(){$("#info").modal('hide');}, 3000);
+                                    location.reload();
                                 }
                             }
                         });
@@ -211,10 +212,10 @@ session_start();
                             }
                                 
                             req.onload = function(oEvent) {
-                                if (req.status == 200) {
+                                if (req.status >= 200 && req.status <= 299) {
                                     var data = req.response;
                                     $('#custom-file-progress-bar').css('width', '0%').attr('aria-valuenow', 0).html();
-                                    if (data.code < 0) {
+                                    if (data.code < 200 || data.code > 299) {
                                         $("#error-content").html(data.message);
                                         $("#error").modal("show");
                                         clearTimeout(errorTimeout);
@@ -270,7 +271,7 @@ session_start();
                             },
                             success: function(data)
                             {
-                                if (data.code < 0) {
+                                if (data.code < 200 || data.code > 299) {
                                     $("#pwdReset-error").html(data.message).fadeIn();
                                     clearTimeout(pwdResetErrorTimeout);
                                     pwdResetErrorTimeout = setTimeout(function(){$("#pwdReset-error").fadeOut();}, 5000);
@@ -306,7 +307,8 @@ session_start();
             $_SESSION["errorMessage"] = null;
             if (isset($_SESSION["logged"]) && $_SESSION["logged"]) {
                 echo("$('#login-button').hide();$('#register-button').hide();");
-                echo("$('#profile-name').val('".$_SESSION["realname"]."');");
+                //echo("$('#profile-name').val('".$_SESSION["realname"]."');");
+                echo("$('#profile-name').val('');");
                 echo("$('#profile-email').val('".$_SESSION["email"]."');");
                 echo("$('#profile-password').val('');");
             } else {
@@ -355,7 +357,7 @@ session_start();
         }
         function resendEmail() {
             $.get('api/register?resend&email='+$("#login-username").val(), function(data) {
-                if (data.code < 0) {
+                if (data.code < 200 || data.code > 299) {
                     $("#error-content").html(data.message);
                     $("#error").modal("show");
                     clearTimeout(errorTimeout);
@@ -375,7 +377,7 @@ session_start();
                 grecaptcha.execute('6LefLhwaAAAAAJRR3LBEhcrmQUs6v2RdN2A4qdzb', {action: 'register'}).then(function(token) {
                     if (validateEmail($("#login-username").val())) {
                         $.get('api/register?resetPwd&recaptcha_token='+token+'&email='+$("#login-username").val(), function(data) {
-                            if (data.code >= 0) {
+                            if (data.code >= 200 && data.code <= 299) {
                                 $("#info-content").html(data.message);
                                 $("#info").modal("show");
                                 clearTimeout(infoTimeout);
@@ -565,8 +567,26 @@ session_start();
                         </div>
                         <div class="modal-body">
                             <div class="form-group">
-                                <label for="name">Name</label>
-                                <input type="text" class="form-control" id="profile-name" autocomplete="nickname" minlength="4" required>
+                                <label for="name">New nickname (fill only if changed)</label>
+                                <input type="text" class="form-control" id="profile-name" autocomplete="new-nickname" minlength="4">
+                            </div>
+                            <div class="form-group">
+                                <label for="password">New password (fill only if changed)</label>
+                                <div class="input-group mb-2 mr-sm-2" id="show_hide_password">
+                                    <input type="password" class="form-control" id="profile-new-password" autocomplete="new-password" minlength="8">
+                                    <div class="input-group-append">
+                                        <div class="input-group-text"><i class="fa fa-eye-slash" aria-hidden="true"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="password">Old password</label>
+                                <div class="input-group mb-2 mr-sm-2" id="show_hide_password">
+                                    <input type="password" class="form-control" id="profile-password" autocomplete="password" minlength="8" required>
+                                    <div class="input-group-append">
+                                        <div class="input-group-text"><i class="fa fa-eye-slash" aria-hidden="true"></i></div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="mail">Email address</label>
@@ -574,17 +594,6 @@ session_start();
                                 <small id="emailHelp" class="form-text text-muted">We'll never share your email with
                                     anyone else.</small>
                             </div>
-
-                            <div class="form-group">
-                                <label for="password">New password</label>
-                                <div class="input-group mb-2 mr-sm-2" id="show_hide_password">
-                                    <input type="password" class="form-control" id="profile-password" autocomplete="new-password" minlength="8" required>
-                                    <div class="input-group-append">
-                                        <div class="input-group-text"><i class="fa fa-eye-slash" aria-hidden="true"></i></div>
-                                    </div>
-                                </div>
-                            </div>
-                            Fill only items you want to change!
                             <div class="error" id="profile-error"></div>
                         </div>
                         <div class="modal-footer">
