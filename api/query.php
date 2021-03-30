@@ -445,7 +445,158 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'GET
             }
         }
         flushResponse(200, "Success!", $mysqli, $result);
+    } else if (isset($_POST["getAvailableFrom"])) {
+        $deps_string = trim($_POST["getAvailableFrom"]);
+        $deps = explode("\n", $deps_string);
+
+        $processed = array();
+        $result = array();
+
+        foreach ($deps as $dep) {
+            /*if (in_array($dep, $processed)) {
+                continue;
+            }*/
+            $dep = str_replace('\\', '/', $dep);
+            $sql = $mysqli->prepare('SELECT * FROM `file_list` LEFT JOIN `package_list` ON `file_list`.`package_id` = `package_list`.`id` WHERE `fname` = ?;');
+            $sql->bind_param("s", $dep);
+            if ($sql->execute()) {
+                $queryResult = $sql->get_result();
+            
+                if (!empty($queryResult)) {
+                    if ($queryResult->num_rows > 0) {
+                        $row = $queryResult->fetch_assoc();
+                        if (in_array($row["id"], $processed)) {
+                            continue;
+                        }
+        
+                        $package = new stdClass();
+                        $package->id = $row["id"];
+                        $package->file_name = $row["original_file_name"];
+                        $package->display_name = $row["display_name"];
+                        $package->category = $row["category"];
+                        $package->era = $row["era"];
+                        $package->country = $row["country"];
+                        $package->version = $row["version"];
+                        $package->owner = $row["owner"];
+                        $package->created = $row["datetime"];
+                        $package->description = $row["description"];
+                        $package->target_path = $row["target_path"];
+                        $package->paid = $row["paid"];
+                        $package->steamappid = $row["steamappid"];
+                        $package->files = array();
+                        $package->dependencies = array();
+        
+                        $sql = $mysqli->prepare('SELECT * FROM `file_list` WHERE `package_id` = ?;');
+                        $sql->bind_param('i', $package->id);
+                        $sql->execute();
+                        $queryResult = $sql->get_result();
+        
+                        if (!empty($queryResult)) {
+                            while ($row = $queryResult->fetch_assoc()) {
+                                array_push($package->files, $row["fname"]);
+                                //array_push($processed, $row["fname"]);
+                            }
+                        }
+        
+                        $sql = $mysqli->prepare('SELECT * FROM `dependency_list` WHERE `package_id` = ?;');
+                        $sql->bind_param('i', $package->id);
+                        $sql->execute();
+                        $queryResult = $sql->get_result();
+        
+                        if (!empty($queryResult)) {
+                            while ($row = $queryResult->fetch_assoc()) {
+                                array_push($package->dependencies, $row["dependency_package_id"]);
+                            }
+                        }
+
+                        array_push($result, $package);
+                        array_push($processed, $package->id);
+                    }
+                }
+            }
+        }
+
+        flushResponse(200, "Success!", $mysqli, $result);
+    } else if (isset($_POST["validateCache"])) {
+        $client_versions = json_decode(trim($_POST["validateCache"]));
+        $sql = $mysqli->prepare('SELECT * FROM `package_list`;');
+        $sql->execute();
+        $queryResult = $sql->get_result();
+
+        $result = array();
+        if (!empty($queryResult)) {
+            while ($row = $queryResult->fetch_assoc()) {
+                $package_id = $row["id"];
+                if (isset($client_versions->$package_id) && $client_versions->$package_id == $row["version"]) {
+                    continue;
+                }
+
+                $package = new stdClass();
+                $package->id = $package_id;
+                $package->file_name = $row["original_file_name"];
+                $package->display_name = $row["display_name"];
+                $package->category = $row["category"];
+                $package->era = $row["era"];
+                $package->country = $row["country"];
+                $package->version = $row["version"];
+                $package->owner = $row["owner"];
+                $package->created = $row["datetime"];
+                $package->description = $row["description"];
+                $package->target_path = $row["target_path"];
+                $package->paid = $row["paid"];
+                $package->steamappid = $row["steamappid"];
+                $package->files = array();
+                $package->dependencies = array();
+
+                $sql2 = $mysqli->prepare('SELECT * FROM `file_list` WHERE `package_id` = ?;');
+                $sql2->bind_param('i', $package_id);
+                $sql2->execute();
+                $queryResult2 = $sql2->get_result();
+
+                if (!empty($queryResult2)) {
+                    while ($row = $queryResult2->fetch_assoc()) {
+                        array_push($package->files, $row["fname"]);
+                        //array_push($processed, $row["fname"]);
+                    }
+                }
+
+                $sql2 = $mysqli->prepare('SELECT * FROM `dependency_list` WHERE `package_id` = ?;');
+                $sql2->bind_param('i', $package_id);
+                $sql2->execute();
+                $queryResult2 = $sql2->get_result();
+
+                if (!empty($queryResult2)) {
+                    while ($row = $queryResult2->fetch_assoc()) {
+                        array_push($package->dependencies, $row["dependency_package_id"]);
+                    }
+                }
+
+                array_push($result, $package);
+            }
+        }
+
+        flushResponse(200, "Success!", $mysqli, $result);
+    } else if (isset($_POST["validateUpload"])) {
+        $files = json_decode(trim($_POST["validateUpload"]));
+        $sql = $mysqli->prepare('SELECT * FROM `file_list` WHERE MATCH(`fname`) AGAINST(? IN BOOLEAN MODE);');
+
+        $result = array();
+        foreach ($files as $_file) {
+            $file = "+$_file";
+            $sql->bind_param("s", $file);
+            $sql->execute();
+            $queryResult = $sql->get_result();
+    
+            if (!empty($queryResult)) {
+                while ($row = $queryResult->fetch_assoc()) {
+                    $result[$row["fname"]] = "{$row["package_id"]}";
+                }
+            }
+        }
+
+        flushResponse(200, "Success!", $mysqli, $result);
     }
+    flushResponse(404, "Operation not found!", $mysqli);
 } else {
     flushResponse(405, "Protocol not supported!", $mysqli);
 }

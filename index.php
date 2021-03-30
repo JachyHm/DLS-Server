@@ -8,10 +8,94 @@ session_start();
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="RailWorks download station" />
-    <meta property="og:description" content="Welcome to RailWorks download station!" />
-    <meta property="og:url" content="https://dls.rw.jachyhm.cz" />
-    <meta property="og:image" content="https://dls.rw.jachyhm.cz/android-chrome-512x512.png" />
+    <?php
+    if (isset($_GET["package"])) {
+        $package_id = $_GET["package"];
+        if (file_exists("files/images/$package_id.png")) {
+            echo("<meta property='og:image' content='https://dls.rw.jachyhm.cz/files/images/$package_id.png' />");
+        } else {
+            echo('<meta property="og:image" content="https://dls.rw.jachyhm.cz/android-chrome-512x512.png" />');
+        }
+        
+        $sql = $mysqli->prepare('SELECT `package_list`.`id`, `original_file_name`, `display_name`, `version`, `owner`, `datetime`, `description`, `target_path`, `paid`, `steamappid`, `steam_dev`, `users`.`nickname` AS `author`, `package_list`.`category` AS `category_id`, `categories`.`text` AS `category`, `era` AS `era_id`, `eras`.`text` AS `era`, `package_list`.`country` AS `country_id`, `countries`.`text` AS `country` FROM `package_list` LEFT JOIN `users` ON `package_list`.`owner` = `users`.`id` LEFT JOIN `categories` ON `package_list`.`category` = `categories`.`id` LEFT JOIN `eras` ON `package_list`.`era` = `eras`.`id` LEFT JOIN `countries` ON `package_list`.`country` = `countries`.`id` WHERE `package_list`.`id` = ?;');
+        $sql->bind_param('i', $package_id);
+        $sql->execute();
+        $queryResult = $sql->get_result();
+
+        if (!empty($queryResult) && $queryResult->num_rows > 0) {
+            $row = $queryResult->fetch_assoc();
+            echo("<meta property='og:title' content='{$row["display_name"]}' />");
+            echo("<meta property='og:description' content='{$row["description"]}' />");
+            echo("<meta property='og:url' content='https://dls.rw.jachyhm.cz/?package=$package_id' />");
+        } else {
+            ?>
+            <meta property="og:title" content="RailWorks download station" />
+            <meta property="og:description" content="Welcome to RailWorks download station!" />
+            <meta property="og:url" content="https://dls.rw.jachyhm.cz" />
+            <?php
+        }
+    } else if (isset($_GET["author"])) {
+        $author_id = $_GET["author"];
+        
+        $sql = $mysqli->prepare('SELECT `nickname`, `email`, `date_created`, `roles`.`display_name` AS `privileges` FROM `users` LEFT JOIN `roles` ON `users`.`privileges` = `roles`.`id` WHERE `users`.`id` = ?;');
+        $sql->bind_param('i', $author_id);
+        $sql->execute();
+        $queryResult = $sql->get_result();
+
+        if (!empty($queryResult) && $queryResult->num_rows > 0) {
+            $row = $queryResult->fetch_assoc();
+            
+            $total_packages = 0;
+            $sql = $mysqli->prepare('SELECT `package_list`.`id`, `display_name`, `categories`.`text` AS `category` FROM `package_list` LEFT JOIN `categories` ON `package_list`.`category` = `categories`.`id` WHERE `owner` = ?;');
+            $sql->bind_param('i', $author_id);
+            $sql->execute();
+            $queryResult = $sql->get_result();
+            if (!empty($queryResult)) {
+                $total_packages = $queryResult->num_rows;
+            }
+            echo("<meta property='og:image' content='https://www.gravatar.com/avatar/".md5(strtolower(trim($row["email"])))."?s=200&d=monsterid' />");
+            echo("<meta property='og:title' content='{$row["nickname"]}' />");
+            echo("<meta property='og:description' content='{$row["privileges"]}, registered on {$row["date_created"]}.\nOwns $total_packages packages.' />");
+            echo("<meta property='og:url' content='https://dls.rw.jachyhm.cz/?author=$author_id' />");
+        } else {
+            ?>
+            <meta property="og:title" content="RailWorks download station" />
+            <meta property="og:description" content="Welcome to RailWorks download station!" />
+            <meta property="og:image" content="https://dls.rw.jachyhm.cz/android-chrome-512x512.png" />
+            <meta property="og:url" content="https://dls.rw.jachyhm.cz" />
+            <?php
+        }
+    } else if (isset($_GET["application"])) {
+        ?>
+        <meta property="og:image" content="https://dls.rw.jachyhm.cz/android-chrome-512x512.png" />
+        <meta property="og:title" content="RailWorks DLS client download" />
+        <meta property="og:description" content="Download RW DLS client right now for free!" />
+        <meta property="og:url" content="https://dls.rw.jachyhm.cz/application" />
+        <?php
+    } else if (isset($_GET["manager"])) {
+        ?>
+        <meta property="og:image" content="https://dls.rw.jachyhm.cz/android-chrome-512x512.png" />
+        <meta property="og:title" content="RailWorks DLS package manager" />
+        <meta property="og:description" content="Please login to manage packages in DLS!" />
+        <meta property="og:url" content="https://dls.rw.jachyhm.cz" />
+        <?php
+    } else if (isset($_GET["admin"])) {
+        $author_id = $_GET["admin"];
+        ?>
+        <meta property="og:image" content="https://dls.rw.jachyhm.cz/android-chrome-512x512.png" />
+        <meta property="og:title" content="RailWorks DLS admin console" />
+        <meta property="og:description" content="Please login to admin DLS server!" />
+        <meta property="og:url" content="https://dls.rw.jachyhm.cz" />
+        <?php
+    } else {
+        ?>
+        <meta property="og:image" content="https://dls.rw.jachyhm.cz/android-chrome-512x512.png" />
+        <meta property="og:title" content="RailWorks download station" />
+        <meta property="og:description" content="Welcome to RailWorks download station!" />
+        <meta property="og:url" content="https://dls.rw.jachyhm.cz" />
+        <?php
+    }
+    ?>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
         integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
@@ -26,6 +110,7 @@ session_start();
 
     <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
     <script type="text/javascript" src="js/jquery-3.5.1.min.js"></script>
+    <script type="text/javascript" src="js/jszip-3.6.0.min.js"></script>
     <script src="https://unpkg.com/bootstrap-table@1.18.0/dist/bootstrap-table.min.js"></script>
     <script src="https://www.google.com/recaptcha/api.js?render=6LefLhwaAAAAAJRR3LBEhcrmQUs6v2RdN2A4qdzb"></script>
 
@@ -706,7 +791,11 @@ session_start();
         } else if (isset($_GET["application"])) {
             include "application.php";
         } else if (isset($_GET["manager"])) {
-            include "manager.php";
+            /*if ($_SESSION["privileges"] < 9) {
+                echo('<h2 style="margin: 20px;text-align: center">Uploading files is temporarily unavailable.</h2>');
+            } else {*/
+                include "manager.php";
+            //}
         } else if (isset($_GET["admin"])) {
             $author_id = $_GET["admin"];
             include "admin.php";

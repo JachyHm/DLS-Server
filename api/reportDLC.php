@@ -34,10 +34,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($queryResult->num_rows > 0) {                
                 $errors = array();
                 try {
+                    $result = array();
                     foreach ($dlcList as $dlc) {
                         $id = $dlc["DLCAppId"];
                         if (count($dlc["IncludedFiles"])) {
-                            $sql = $mysqli->prepare('SELECT `steamappid` FROM `package_list` WHERE `steamappid` = ?;');
+                            $sql = $mysqli->prepare('SELECT `steamappid`, `id` FROM `package_list` WHERE `steamappid` = ?;');
                             $sql->bind_param('i', $id);
                             $sql->execute();
                             $queryResult = $sql->get_result();
@@ -120,12 +121,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 }
                             } else {
                                 array_push($errors, "$id already exists!");
+                                /*$row = $queryResult->fetch_assoc();
+                                $package_id = $row["id"];
+
+                                $files = $dlc["IncludedFiles"];
+                                $sql = $mysqli->prepare('INSERT INTO `file_list` (`package_id`, `fname`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `package_id`=`package_id`;');
+                                foreach ($files as $file_name) {
+                                    $_file_name = str_replace('\\', '/', $file_name);
+                                    $sql->bind_param('is', $package_id, $_file_name);
+                                    $sql->execute();
+                                }*/
                             }
                         } else {
                             array_push($errors, "$id does not contain any files!");
                         }
+                        
+                        $sql = $mysqli->prepare('SELECT * FROM `file_list` LEFT JOIN `package_list` ON `file_list`.`package_id` = `package_list`.`id` WHERE `steamappid` = ?;');
+                        $sql->bind_param("s", $id);
+                        if ($sql->execute()) {
+                            $queryResult = $sql->get_result();
+                        
+                            if (!empty($queryResult)) {
+                                if ($queryResult->num_rows > 0) {
+                                    $row = $queryResult->fetch_assoc();
+                    
+                                    $package = new stdClass();
+                                    $package->id = $row["id"];
+                                    $package->file_name = $row["original_file_name"];
+                                    $package->display_name = $row["display_name"];
+                                    $package->category = $row["category"];
+                                    $package->era = $row["era"];
+                                    $package->country = $row["country"];
+                                    $package->version = $row["version"];
+                                    $package->owner = $row["owner"];
+                                    $package->created = $row["datetime"];
+                                    $package->description = $row["description"];
+                                    $package->target_path = $row["target_path"];
+                                    $package->paid = $row["paid"];
+                                    $package->steamappid = $row["steamappid"];
+                                    $package->files = array();
+                                    $package->dependencies = array();
+                    
+                                    $sql = $mysqli->prepare('SELECT * FROM `file_list` WHERE `package_id` = ?;');
+                                    $sql->bind_param('i', $package->id);
+                                    $sql->execute();
+                                    $queryResult = $sql->get_result();
+                    
+                                    if (!empty($queryResult)) {
+                                        while ($row = $queryResult->fetch_assoc()) {
+                                            array_push($package->files, $row["fname"]);
+                                            //array_push($processed, $row["fname"]);
+                                        }
+                                    }
+                    
+                                    $sql = $mysqli->prepare('SELECT * FROM `dependency_list` WHERE `package_id` = ?;');
+                                    $sql->bind_param('i', $package->id);
+                                    $sql->execute();
+                                    $queryResult = $sql->get_result();
+                    
+                                    if (!empty($queryResult)) {
+                                        while ($row = $queryResult->fetch_assoc()) {
+                                            array_push($package->dependencies, $row["dependency_package_id"]);
+                                        }
+                                    }
+
+                                    array_push($result, $package);
+                                }
+                            }
+                        }
                     }
-                    flushResponse(200, "DLC files written successfully! Thank you for contributing!", $mysqli, $errors);
+                    flushResponse(200, "DLC files written successfully! Thank you for contributing!", $mysqli, $result);
                 } catch (Exception $e) {
                     $err = $e->getMessage();
                     flushResponse(500, "Fatal error occured! $err", $mysqli);

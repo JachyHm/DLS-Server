@@ -36,7 +36,6 @@ if (!empty($queryResult)) {
         $country_id = $row["country_id"];
         $era = $row["era"];
         $era_id = $row["era_id"];
-        $country = $row["country"];
         $filename = $row["original_file_name"];
         $version = $row["version"];
         $datetime = $row["datetime"];
@@ -228,7 +227,10 @@ if (!empty($queryResult)) {
         <p><?php echo($package_desc)?></p>
         <?php 
         if (isset($_SESSION["logged"]) && $_SESSION["logged"] && (($author_id == $_SESSION["userid"] && $_SESSION["privileges"] > 0) || $_SESSION["privileges"] > 1)) {
-            echo("<button type='button' class='btn btn-primary' data-toggle='modal' data-target='#editPackage' style='margin: 5px'>Edit package</button><button type='button' class='btn btn-primary' data-toggle='modal' data-target='#dependenciesModal' style='margin: 5px'>Edit dependencies</button><a href=\"/api/update?package_id=$package_id&refreshDLC=$steamappid\"><button type='button' class='btn btn-primary' style='margin: 5px'>Refresh Steam DLC</button></a>");
+            echo("<button type='button' class='btn btn-primary' data-toggle='modal' data-target='#editPackage' style='margin: 5px'>Edit package</button><button type='button' class='btn btn-primary' data-toggle='modal' data-target='#dependenciesModal' style='margin: 5px'>Edit dependencies</button><a href=\"/?manager=$package_id\"><button type='button' class='btn btn-primary' style='margin: 5px'>Upload update</button></a>");
+            if ($_SESSION["privileges"] == 9) {
+                echo("<a href=\"/api/update?package_id=$package_id&refreshDLC=$steamappid\"><button type='button' class='btn btn-primary' style='margin: 5px'>Refresh Steam DLC</button></a>");
+            }
         }
         ?>
     </div>

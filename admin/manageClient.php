@@ -30,9 +30,9 @@
 				}
 					
 				req.onload = function(oEvent) {
-					if (req.status >= 200 && req.status <= 299) {
+					if (req.status == 200) {
 						var data = req.response;
-						if (data.code < 200 || data.code > 299) {
+						if (data.code < 0) {
 							$("#error-content").html(data.message);
 							$("#error").modal("show");
 							clearTimeout(errorTimeout);

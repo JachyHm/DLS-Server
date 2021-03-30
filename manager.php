@@ -11,39 +11,211 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
     die();
 }
 ?>
-
+<!-- https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js -->
 <script type="text/javascript">
     var selectedDeps = new Array();
     var featuredDeps = new Array();
     var searchTimeout;
+    var localFiles = new Array();
+    var serverFiles = new Array();
+    var duplicatePackages = new Array();
+    var validatedUpload = false;
+    var mustBeUpdate = -1;
+    var isUpdateChecked = false;
+    var uploadPending = false;
+    var targetPath = "";
+    var availablePackages = [];
+    var verificationFile = "";
+    var extensionExp = /(?:\.([^.]+))?$/;
+
+    var nameChanged = false;
+    var categoryChanged = false;
+    var countryChanged = false;
+    var eraChanged = false;
+    var descChanged = false;
+    var targetPathChanged = false;
 
     $(document).ready(function(){
+        updateButton();
+
+        <?php
+        if (isset($_GET["manager"]) && !empty($_GET["manager"])) {
+            $package_id = $_GET["manager"];
+            echo("fillValuesWithOriginal($package_id);");
+        }
+        ?>
+
+        $('#actualisation option').each(function() { 
+            availablePackages.push( $(this).attr('value') );
+        });
+
         function resetProgress(){
             $('#progress-bar').css('width', '0%').attr('aria-valuenow', 0).html();
             return false;
         }
 
-        $('#isUpdate').on('change', function(event){
+        function displayError(message) {
+            $("#error-content").html(message);
+            $("#error").modal("show");
+            clearTimeout(errorTimeout);
+            errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);
+        }
+
+        function fillValuesWithOriginal(packageId, withTargetPath = false) {
+            var req = new XMLHttpRequest();
+            var reqData = new FormData();
+            req.responseType = 'json';
+            
+            req.onload = function(oEvent) {
+                if (req.status >= 200 && req.status <= 299) {
+                    var data = req.response;
+                    if (data.code >= 200 && data.code <= 299) {
+                        updatedPackage = data.content;
+                        if (!nameChanged) {
+                            $("#packName").val(updatedPackage.display_name);
+                        }
+                        if (!categoryChanged) {
+                            $("#category").val(updatedPackage.category);
+                        }
+                        if (!countryChanged) {
+                            $("#country").val(updatedPackage.country);
+                        }
+                        if (!eraChanged) {
+                            $("#era").val(updatedPackage.era);
+                        }
+                        $("#version").val(updatedPackage.version+1);
+                        if (!descChanged) {
+                            $("#desc").val(updatedPackage.description);
+                        }
+                        if (!targetPathChanged) {
+                            $("#targetPath").val(updatedPackage.target_path);
+                            cleanTargetPath();
+                        }
+                        $('#isUpdate').prop("checked", true);
+                        onUpdateStateChanged();
+                        //$('#isUpdate').prop("disabled", true);
+                        $('#actualisation').show();
+                        $('#actualisation').val(updatedPackage.id);
+                    }
+                }
+                $('#actualisation').prop("disabled", false);
+                updateButton();
+            };
+
+            reqData.append("id", packageId);
+
+            req.open("POST", "api/query", true);
+            req.send(reqData);
+            $('#actualisation').prop("disabled", true);
+        }
+
+        function updateTargetPathHint() {
+            if (!verificationFile) {
+                $('#targetPathLabel').html("Target path where zip will be extracted");
+            } else {
+                $('#targetPathLabel').html("Target path where zip will be extracted, e.g. file \""+verificationFile+".xml\" will now be placed into \"Assets/"+targetPath+verificationFile+".xml\"");
+            }
+        }
+
+        $('#packName').bind('input', function() {
+            nameChanged = $(this).val();
+        });
+
+        $('#category').bind('input', function() {
+            categoryChanged = $(this).val();
+        });
+        
+        $('#country').bind('input', function() {
+            countryChanged = $(this).val();
+        });
+
+        $('#era').bind('input', function() {
+            eraChanged = $(this).val();
+        });
+
+        $('#description').bind('input', function() {
+            descChanged = $(this).val();
+        });
+
+        $('#actualisation').bind('input', function() {
+            fillValuesWithOriginal($('#actualisation').val(), true);
+        });
+
+        function onUpdateStateChanged() {
             if ($('#isUpdate').is(':checked')) {
                 $('#actualisation').show();
+                isUpdateChecked = true;
             } else {
                 $('#actualisation').hide();
+                isUpdateChecked = false;
             }
+            updateButton();
+        }
+
+        $('#isUpdate').bind('input', function() {
+            onUpdateStateChanged();
         });
 
-        $('#file').on('change', function(event) {
+        $('#file').bind('input', function() {
+            validatedUpload = false;
+            updateButton();
+            var file = event.target.files[0];
+            JSZip.loadAsync(file).then(function(content) {
+                localFiles = [];
+                for (const item in content.files) {
+                    const ext = extensionExp.exec(item.toLowerCase())[1];
+                    if (!content.files[item].dir && (ext == "xml" || ext == "bin")) {
+                        localFiles.push(item.replace(/\.[^/.]+$/, "").toLowerCase());
+                    }
+                }
+                verificationFile = localFiles[Math.floor(Math.random()*(localFiles.length-1))];
+                updateTargetPathHint();
+                if (localFiles.length == 0) {
+                    displayError("Uploaded file does not contain any assets!");
+                    $('#file').val("");
+                    $('#fname').html("Choose file to upload");
+                    return;
+                }
+                getServerFiles();
+            }, function(e) {
+                displayError("Your file either seems not to be zip file, or it is corrupted.");
+                $('#file').val("");
+                $('#fname').html("Choose file to upload");
+            });
             $('#fname').html($('#file').val().split('\\').pop());
-            checkFilename($('#file').val().split('\\').pop());
         });
 
-        $('#image').on('change', function(event) {
+        function cleanTargetPath() {
+            targetPath = $('#targetPath').val().trim().replace(/\\/g, "/").toLowerCase();
+            var lastChar = targetPath.substr(-1);
+            if (lastChar !== '/' && targetPath.length > 0) {
+                targetPath += '/';
+            }
+            var firstChar = targetPath.charAt(0);
+            if (firstChar == '/') {
+                targetPath = targetPath.substr(1);
+            }
+            updateTargetPathHint();
+        }
+
+        $('#targetPath').on('change', function(event) {
+            cleanTargetPath();
+            checkFiles();
+        });
+
+        $('#targetPath').bind('input', function() {
+            targetPathChanged = $('#targetPath').val();
+            cleanTargetPath();
+        });
+
+        $('#image').bind('input', function() {
             $('#imgname').html($('#image').val().split('\\').pop());
         });
 
         var forms = document.getElementsByClassName('needs-validation');
         var validation = Array.prototype.filter.call(forms, function(form) {
             form.addEventListener('submit', function(event) {
-                if (form.checkValidity() === false) {
+                if (form.checkValidity() === false || !validatedUpload) {
                     event.preventDefault();
                     event.stopPropagation();
                 }
@@ -55,71 +227,75 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
 
-            var re = /^[^?%*:|"><.]+$/;
-            var target_path = $("#targetPath").val();
-            if (re.test(target_path)) {
-                if ($('#file').val().split('\\').pop().split('.').pop().toLowerCase() == 'zip') {
-                    var reqData = new FormData(form);
+            if (!uploadPending && validatedUpload) {
+                var re = /^[^?%*:|"><.]+$/;
+                //var target_path = $("#targetPath").val();
+                if (re.test(targetPath)) {
+                    if ($('#file').val().split('\\').pop().split('.').pop().toLowerCase() == 'zip') {
+                        var reqData = new FormData(form);
 
-                    if (!$('#isUpdate').is(':checked')) {
-                        reqData.delete("actualisation");
-                    }
-                    //oData.append("token", "This is some extra data");
-                    var ids = [];
-                    selectedDeps.forEach(function(item) {
-                        ids.push(item.id);
-                    });
-                    reqData.append("depends", JSON.stringify(ids));
+                        if (!$('#isUpdate').is(':checked')) {
+                            reqData.delete("actualisation");
+                        }
+                        //oData.append("token", "This is some extra data");
+                        var ids = [];
+                        selectedDeps.forEach(function(item) {
+                            ids.push(item.id);
+                        });
+                        reqData.append("depends", JSON.stringify(ids));
 
-                    var req = new XMLHttpRequest();
-                    req.responseType = 'json';
-                    req.onloadstart = function(){
-                        resetProgress();
-                        return true;
-                    };
+                        var req = new XMLHttpRequest();
+                        req.responseType = 'json';
+                        req.onloadstart = function(){
+                            resetProgress();
+                            return true;
+                        };
 
-                    req.upload.onprogress = function(event) {
-                        var percentComplete = (event.loaded/event.total)*100;
-                        $('#progress-bar').css('width', percentComplete+'%').attr('aria-valuenow', percentComplete).html(percentComplete.toFixed(2)+'%');
-                    }
-                        
-                    req.onload = function(oEvent) {
-                        if (req.status >= 200 && req.status <= 299) {
+                        req.upload.onprogress = function(event) {
+                            var percentComplete = (event.loaded/event.total)*100;
+                            uploadPending = percentComplete < 100;
+                            updateButton();
+                            $('#progress-bar').css('width', percentComplete+'%').attr('aria-valuenow', percentComplete).html(percentComplete.toFixed(2)+'%');
+                        }
+                            
+                        req.onload = function(oEvent) {
                             var data = req.response;
                             resetProgress();
-                            if (data.code < 200 || data.code > 299) {
-                                $("#error-content").html(data.message);
-                                $("#error").modal("show");
-                                clearTimeout(errorTimeout);
-                                errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);
+                            if (req.status >= 200 && req.status <= 299) {
+                                if (data.code < 200 || data.code > 299) {
+                                    displayError(data.message);
+                                } else {
+                                    window.location.replace('?package='+data.content.package_id);
+                                }
                             } else {
-                                window.location.replace('?package='+data.content.package_id);
+                                if (data != null) {
+                                    displayError(data.message);
+                                } else {
+                                    displayError("Error "+req.status);
+                                }
                             }
-                        } else {
-                            $("#error-content").html("Error "+req.status);
-                            $("#error").modal("show");
-                            clearTimeout(errorTimeout);
-                            errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);
-                        }
-                    };
+                            uploadPending = false;
+                            updateButton();
+                        };
 
-                    req.open("POST", "api/upload.php", true);
-                    req.send(reqData);
+                        req.open("POST", "api/upload.php", true);
+                        req.send(reqData);
+                        uploadPending = true;
+                        updateButton();
+                    } else {
+                        displayError("Uploaded file must be *.zip or *.rwp!");
+                        e.stopPropagation();
+                    }
                 } else {
-                    $("#error-content").html("Uploaded file must be *.zip!");
-                    $("#error").modal("show");
-                    clearTimeout(errorTimeout);
-                    errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);
-                    event.stopPropagation();
+                    displayError("Target path must be valid Windows folderpath from Assets folder!");
+                    e.stopPropagation();
                 }
-            } else {
-                $("#error-content").html("Target path must be valid Windows folderpath from Assets folder!");
-                $("#error").modal("show");
-                clearTimeout(errorTimeout);
-                errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);
-                event.stopPropagation();
             }
         });
+
+        function updateButton() {
+            $('#submitButton').prop("disabled", !validatedUpload || uploadPending || (mustBeUpdate >= 0 && (!isUpdateChecked || mustBeUpdate != $('#actualisation').val())));
+        }
 
         var search_dep = $("#searchPkg");
 
@@ -153,9 +329,8 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
             req.responseType = 'json';
                 
             req.onload = function(oEvent) {
+                var data = req.response;
                 if (req.status >= 200 && req.status <= 299) {
-                    var data = req.response;
-                    resetProgress();
                     if (data.code < 200 || data.code > 299) {
                         $("#search-error").html(data.message);
                         $("#search-error").fadeIn();
@@ -172,7 +347,11 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
                         buildChB('#featured', featuredDeps, 'featured');
                     }
                 } else {
-                    $("#search-error").html("Error "+req.status);
+                    if (data != null) {
+                        $("#search-error").html(data.message);
+                    } else {
+                        $("#search-error").html("Error "+req.status);
+                    }
                     $("#search-error").fadeIn();
                     clearTimeout(errorTimeout);
                     errorTimeout = setTimeout(function(){$("#search-error").fadeOut();}, 5000);
@@ -185,43 +364,71 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
             req.send();
         }
 
-        search_dep.on('change paste keyup', function(e) {
+        search_dep.bind('input', function() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(search, 400);
         });
 
-        function checkFilename(fname) {
+        $('#updateModalYes').on('click', function(event) {
+            fillValuesWithOriginal(duplicatePackages[0]);
+        });
+        
+        $('#updateModalNo').on('click', function(event) {
+            displayError("Unable to continue. Please remove duplicate files before proceeding!");
+        });
+
+        function checkFiles() {
+            duplicatePackages = [];
+            Object.entries(serverFiles).forEach(function(serverItem) {
+                const [key, value] = serverItem;
+                localFiles.forEach(function(localItem) {
+                    if (key.toLowerCase() == targetPath + localItem && !duplicatePackages.includes(value)) {
+                        duplicatePackages.push(value);
+                    }
+                });
+            });
+            if (duplicatePackages.length == 1 && availablePackages.includes(duplicatePackages[0])) {
+                validatedUpload = true;
+                mustBeUpdate = duplicatePackages[0];
+                if (mustBeUpdate != $('#actualisation').val()) {
+                    $("#updateModalContent").html("One or more files from this package are already included in package "+duplicatePackages[0]+"!<br>Is this an update of it?");
+                    $("#updateModalTitle").html("Duplicate files found!");
+                    $("#updateModal").modal("show");
+                }
+            } else if (duplicatePackages.length > 0) {
+                displayError("Packages "+duplicatePackages.join(", ")+" already include files from this package!<br>Please remove them either from this package or from existing ones before proceeding.");
+                mustBeUpdate = -1;
+                validatedUpload = false;
+                $('#file').val("");
+                $('#fname').html("Choose file to upload");
+            } else {
+                mustBeUpdate = -1;
+                validatedUpload = localFiles.length > 0;
+            }
+            updateButton();
+        }
+
+        function getServerFiles() {
             var req = new XMLHttpRequest();
+            var reqData = new FormData();
             req.responseType = 'json';
             
             req.onload = function(oEvent) {
                 if (req.status >= 200 && req.status <= 299) {
                     var data = req.response;
-                    if (data.code > 200 && data.code < 299) {
-                        if ($('#isUpdate').is(':checked')) {
-                            $('#actualisation').val(data.content.id);
-                        } else {
-                            $("#updatePkg").modal('show');
-                            $("#update-yes").on('click', function() {
-                                $('#isUpdate').attr('checked','');
-                                $('#actualisation').val(data.content.id);
-                                $('#actualisation').show();
-                            });
-                            $("#update-no").on('click', function() {
-                                $('#file').val("");
-                                $('#fname').html("Choose file to upload");
-                            })
-                            $("#update-close").on('click', function() {
-                                $('#file').val("");
-                                $('#fname').html("Choose file to upload");
-                            })
-                        }
+                    if (data.code >= 200 && data.code <= 299) {
+                        serverFiles = data.content;
+                        checkFiles();
                     }
+                } else {
+                    displayError("Unable to verify uploaded file!");
                 }
             };
 
-            req.open("GET", "api/query?packageFile="+fname, true);
-            req.send();
+            reqData.append("validateUpload", JSON.stringify(localFiles));
+
+            req.open("POST", "api/query", true);
+            req.send(reqData);
         }
     });
 </script>
@@ -230,7 +437,7 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
         <p><h1>Package manager</h1></p>
     </div>
     <form name="form" id="form" class="needs-validation" enctype="multipart/form-data"  method="post" novalidate>
-        <div class="row flex">    
+        <div class="row flex">
             <div class="col-md-6 form-group">
                 <label for="packName">Package name</label>
                 <input type="text" class="form-control" id="packName" name="packageName" required>
@@ -295,12 +502,12 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
             </div>
         </div>
         <div class="form-group">
-            <label for="targetPath">Target path where zip will be extracted</label>
+            <label id="targetPathLabel" for="targetPath">Target path where zip will be extracted</label>
             <div class="input-group mb-2">
                 <div class="input-group-prepend">
                     <div class="input-group-text">Assets/</div>
                 </div>
-                <input type="text" class="form-control" id="targetPath" name="targetPath" required>
+                <input type="text" class="form-control" id="targetPath" name="targetPath">
             </div>
         </div>
         <div class="form-group">
@@ -326,16 +533,20 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
             </div>
         </div>
         <div class="row flex custom-control custom-switch">
-            <div class="col-md-2 form-group">
+            <div class="col-md-4 form-group">
                 <input type="checkbox" class="custom-control-input" id="isUpdate">
-                <label class="custom-control-label" for="isUpdate">File update</label>
+                <label class="custom-control-label" for="isUpdate">This is an update of existing package</label>
             </div>
-            <div class="col-md-10 form-group">
+            <div class="col-md-8 form-group">
                 <select class="form-control" id="actualisation" name="actualisation" required style="display: none;">
                     <option selected disabled>Which package are you updating?</option>
                     <?php
-                    $sql = $mysqli->prepare('SELECT `id`, `display_name` FROM `package_list` WHERE `owner` = ? ORDER BY `display_name`;');
-                    $sql->bind_param('i', $_SESSION["userid"]);
+                    if ($_SESSION["privileges"] > 1) {
+                        $sql = $mysqli->prepare('SELECT `id`, `display_name` FROM `package_list` WHERE `category` < 8 ORDER BY `display_name`;');
+                    } else {
+                        $sql = $mysqli->prepare('SELECT `id`, `display_name` FROM `package_list` WHERE `owner` = ? ORDER BY `display_name`;');
+                        $sql->bind_param('i', $_SESSION["userid"]);
+                    }
                     $sql->execute();
                     $queryResult = $sql->get_result();
 
@@ -350,7 +561,7 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
         </div>
         <div class="form-group">
             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#dependenciesModal">Add dependencies</button>
-            <button type="submit" class="btn btn-primary">Upload file</button>
+            <button type="submit" class="btn btn-primary" id="submitButton">Upload file</button>
         </div>
     </form>
 </div>
@@ -386,22 +597,20 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
     </div>
 </div>
 
-<div class="modal fade" data-backdrop="static" aria-hidden="true" id="updatePkg" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Rewrite package?</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close" id="update-close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <p>Such package already exists. Is this an update?</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-dismiss="modal" id="update-yes">Yes</button>
-        <button type="button" class="btn btn-secondary" data-dismiss="modal" id="update-no">No</button>
-      </div>
+<div class="modal fade" tabindex="-1" id="updateModal">
+    <div class="modal-dialog ">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="updateModalTitle">Duplicate files found!</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <p id="updateModalContent">Nope, nebudeš nahrávat.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-dismiss="modal" id="updateModalYes">Yes</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="updateModalNo">No</button>
+            </div>
+        </div>
     </div>
-  </div>
 </div>

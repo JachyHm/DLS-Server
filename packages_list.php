@@ -15,17 +15,23 @@
             if ($("#era").val()) {
                 query += '&era='+$("#era").val();
             }
-            $.get(query, function(data) {
+            $.get(query, function(data, status, error) {
                 if (data.code < 200 || data.code > 299) {
-                    $("#error-content").html(data.message);
+                    /*$("#error-content").html(data.message);
                     $("#error").modal("show");
                     clearTimeout(errorTimeout);
-                    errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);
+                    errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);*/
                     $('#table').bootstrapTable('destroy');
                 } else {
                     $('#table').bootstrapTable({data: data.content});
                     $('#table').bootstrapTable('load', data.content);
                 }
+            }).fail(function(data) {
+                /*$("#error-content").html(data.responseJSON.message);
+                $("#error").modal("show");
+                clearTimeout(errorTimeout);
+                errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);*/
+                $('#table').bootstrapTable('destroy');
             });
         }
         var delay = 400;
@@ -68,7 +74,7 @@
             </div>
             <div class="col">
                 <select class="form-control" placeholder="Category" id="category">
-                    <option value="" selected disabled>Category</option>
+                    <option value="" selected>All categories</option>
                     <?php
                     $sql = $mysqli->prepare('SELECT * FROM `categories`;');
                     $sql->execute();
@@ -84,7 +90,7 @@
             </div>
             <div class="col">
                 <select class="form-control" placeholder="Country" id="country">
-                    <option value="" selected disabled>Country</option>
+                    <option value="" selected>All countries</option>
                     <?php
                     $sql = $mysqli->prepare('SELECT * FROM `countries`;');
                     $sql->execute();
@@ -100,7 +106,7 @@
             </div>
             <div class="col">
                 <select class="form-control" placeholder="Era" id="era">
-                    <option value="" selected disabled>Era</option>
+                    <option value="" selected>All eras</option>
                     <?php
                     $sql = $mysqli->prepare('SELECT * FROM `eras`;');
                     $sql->execute();

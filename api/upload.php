@@ -186,8 +186,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 imagepng($image_p, $filename);
                                             }
 
+                                            $content = new stdClass();
+                                            $content->package_id = $package_id;
+
                                             db_log(17, true, $userid, $ip, $_SESSION["token"], "Package $package_id uploaded successfully!", $mysqli);
-                                            flushResponse(200, "File uploaded successfully!", $mysqli);
+                                            flushResponse(200, "File uploaded successfully!", $mysqli, $content);
                                         }
 
                                         $e = $mysqli->error;

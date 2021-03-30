@@ -1,7 +1,7 @@
 <?php
 function flushResponse($code, $message, $mysqli, $body = null) 
 {
-    //http_response_code($code);
+    http_response_code($code);
 
     if (!isset($body)) {
         $body = new stdClass();

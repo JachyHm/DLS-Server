@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $sql->bind_param('si', $_POST["target_path"], $package_id);
                     $sql->execute();
                 } else {
-                    $sql = $mysqli->prepare('UPDATE `file_list` SET `fname` = STUFF(`fname`, CHARINDEX(?, `fname`), LEN(?), ?) WHERE `package_id` = ?;');
+                    $sql = $mysqli->prepare('UPDATE `file_list` SET `fname` = INSERT(`fname`, LOCATE(?, `fname`), LENGTH(?), ?) WHERE `package_id` = ?;');
                     $sql->bind_param('sssi', $target_path, $target_path, $_POST["target_path"], $package_id);
                     $sql->execute();
                 }
@@ -243,7 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 raiseError("$steamappid isn't Train Simulator DLC!");
             }
-            raiseError("Refreshing Steam DLC query for \"$url\" failed with: $response_code!");
+            raiseError("Refreshing Steam DLC query for $url failed with: $response_code!");
         } else {
             raiseError("Missing required parameters!");
         }
