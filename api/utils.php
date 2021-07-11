@@ -7,6 +7,12 @@ function flushResponse($code, $message, $mysqli, $body = null)
         $body = new stdClass();
     }
 
+    /*if ($code >= 200 && $code <= 299) {
+        $code = 1;
+    } else {
+        $code = -1;
+    }*/
+
     $response = new stdClass();
     $response->code = $code;
     $response->message = $message;

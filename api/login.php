@@ -63,9 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($queryResult->num_rows > 0) {
                 $row = $queryResult->fetch_assoc();
 
-                if (password_verify($password, $row["password"])) {
-                    if ($row["valid_email"]) {
-                        if ($row["activated"]) {
+                if ($row["valid_email"]) {
+                    if ($row["activated"]) {
+                        if (password_verify($password, $row["password"])) {
                             $userid = $row["id"];
                             $_SESSION["logged"] = true;
                             $_SESSION["userid"] = $userid;
@@ -97,14 +97,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                             db_log(11, true, $userid, $ip, $token, "User logged in successfully.", $mysqli);
                             flushResponse(200, "User logged in successfully.", $mysqli, $content);
-                        } else {
-                            db_log(11, false, -1, $ip, $email, "Account not yet approved by moderator.", $mysqli);
-                            flushResponse(403, "Account not yet approved by moderator.", $mysqli);
                         }
                     } else {
-                        db_log(11, false, -1, $ip, $email, "Email not activated yet.", $mysqli);
-                        flushResponse(403, "Email not activated yet.", $mysqli, -2);
+                        db_log(11, false, -1, $ip, $email, "Account not yet approved by moderator.", $mysqli);
+                        flushResponse(403, "Account not yet approved by moderator.", $mysqli);
                     }
+                } else {
+                    db_log(11, false, -1, $ip, $email, "Email not activated yet.", $mysqli);
+                    flushResponse(403, "Email not activated yet.", $mysqli, -2);
                 }
             }
         }

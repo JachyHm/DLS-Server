@@ -1,5 +1,10 @@
 <?php
 
+if (!isset($index)) {
+    header("Location: /?application");
+    die();
+}
+
 function obfuscate_email($email)
 {
     $em   = explode("@", $email);
@@ -63,7 +68,7 @@ if (!empty($queryResult)) {
                         <th scope="row">Email address:</th>
                         <td>
                             <?php
-                            if (isset($_SESSION["logged"]) && $_SESSION["logged"]) {
+                            if (isset($_SESSION["logged"]) && $_SESSION["logged"] && $_SESSION["userid"] == $author_id) {
                                 echo("<a href='mailto://$email'>$email</a>");
                             } else {
                                 echo(obfuscate_email($email));
@@ -85,7 +90,6 @@ if (!empty($queryResult)) {
                 </tbody>
             </table>
         </div>
-        
     </div>
     <?php
     if (!empty($queryResult)) {

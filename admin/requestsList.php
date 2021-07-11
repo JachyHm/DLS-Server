@@ -20,7 +20,7 @@
         </thead>
         <tbody>
         <?php
-        $sql = $mysqli->prepare('SELECT `become_author_requests`.`id` AS `request_id`, `user_id`, `real_name`, `datetime`, `closed`, `success`, `nickname`, `users`.`id`, `email` FROM `become_author_requests` LEFT JOIN `users` ON `become_author_requests`.`user_id` = `users`.`id` ORDER BY `closed`;');
+        $sql = $mysqli->prepare('SELECT `become_author_requests`.`id` AS `request_id`, `user_id`, `real_name`, `datetime`, `closed`, `success`, `nickname`, `users`.`id`, `email` FROM `become_author_requests` LEFT JOIN `users` ON `become_author_requests`.`user_id` = `users`.`id` ORDER BY `closed` DESC, `datetime` DESC;');
         $sql->execute();
         $queryResult = $sql->get_result();
 

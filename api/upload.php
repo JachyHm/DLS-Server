@@ -171,7 +171,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                             if (@is_uploaded_file($_FILES['image']['tmp_name']) && mime_content_type($_FILES['image']['tmp_name']) == "image/png") {
                                                 $filename = $files_folder."images/".$package_id.".png";
+
                                                 move_uploaded_file($_FILES['image']['tmp_name'], $filename);
+
+                                                $handle = fopen($filename, "rb");
+                                                $contents = fread($handle, 4);
+
+                                                if ($contents != "\x89PNG") {
+                                                    unlink($filename);
+                                                    db_log(17, false, $userid, $ip, $_SESSION["token"], "Uploaded image is not valid PNG!", $mysqli);
+                                                    flushResponse(400, "Uploaded image is not valid PNG!", $mysqli);
+                                                }
+
                                                 list($width_orig, $height_orig) = getimagesize($filename);
 
                                                 $ratio_orig = $width_orig/$height_orig;
@@ -216,7 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         db_log(17, false, $userid, $ip, $_SESSION["token"], "Target path is not valid!", $mysqli);
                         flushResponse(400, "Target path must be valid Windows folderpath from Assets folder!", $mysqli);
                     }
-                } else {                    
+                } else {
                     db_log(17, false, $userid, $ip, $_SESSION["token"], "Not all parameters set!", $mysqli);
                     flushResponse(400, "Not all parameters set!", $mysqli);
                 }

@@ -1,3 +1,9 @@
+<?php
+if (!isset($index)) {
+    header("Location: /?application");
+    die();
+}
+?>
 <script type="text/javascript">
     var onChangeTimer;
     $(document).ready(function(){

@@ -1,5 +1,10 @@
 <?php
 
+if (!isset($index)) {
+    header("Location: /?application");
+    die();
+}
+
 $version_code = "AN ERROR OCCURED WHEN LOADING DATABASE";
 $date_published = "";
 $comment = "";

@@ -3,6 +3,7 @@
 <?php
 require "dls_db.php";
 session_start();
+$index = true;
 ?>
 <head>
     <meta charset="utf-8">
@@ -119,6 +120,7 @@ session_start();
         var registrationErrorTimeout;
         var profileErrorTimeout;
         var pwdResetErrorTimeout;
+        var becomeAuthorDenyTimeout;
         var infoTimeout;
         var errorTimeout;
         <?php 
@@ -195,7 +197,15 @@ session_start();
                                     $('#profile-password').val('');
                                     window.location.replace('/');
                                 }
-                            }
+                            },
+			    error: function (request, status, error) {
+				clearTimeout(loginErrorTimeout);
+                                $("#login-error").html(request.responseJSON.message).fadeIn();
+                                loginErrorTimeout = setTimeout(function(){$("#login-error").fadeOut();}, 5000);
+                                if (request.responseJSON.content == -2) {
+                                    $("#resend-button").show();
+                                }
+			    }
                         });
                     });
                 });
@@ -230,6 +240,11 @@ session_start();
                                     clearTimeout(infoTimeout);
                                     infoTimeout = setTimeout(function(){$("#info").modal('hide');}, 3000);
                                 }
+                            },
+                            error: function (request, status, error) {
+                                clearTimeout(registrationErrorTimeout);
+                                $("#registration-error").html(request.responseJSON.message).fadeIn();
+                                registrationErrorTimeout = setTimeout(function(){$("#registration-error").fadeOut();}, 5000);
                             }
                         });
                     });
@@ -267,6 +282,11 @@ session_start();
                                     // infoTimeout = setTimeout(function(){$("#info").modal('hide');}, 3000);
                                     location.reload();
                                 }
+                            },
+                            error: function (request, status, error) {
+                                clearTimeout(profileErrorTimeout);
+                                $("#profile-error").html(request.responseJSON.message).fadeIn();
+                                profileErrorTimeout = setTimeout(function(){$("#profile-error").fadeOut();}, 5000);
                             }
                         });
                     });
@@ -367,6 +387,54 @@ session_start();
                                     clearTimeout(infoTimeout);
                                     infoTimeout = setTimeout(function(){$("#info").modal('hide');}, 3000);
                                 }
+                            },
+                            error: function (request, status, error) {
+                                clearTimeout(pwdResetErrorTimeout);
+                                $("#pwdReset-error").html(request.responseJSON.message).fadeIn();
+                                pwdResetErrorTimeout = setTimeout(function(){$("#pwdReset-error").fadeOut();}, 5000);
+                            }
+                        });
+                    });
+                });
+            });
+            $(".becomeAuthorDeny-form").submit(function(e) {
+                e.preventDefault();
+
+                grecaptcha.ready(function() {
+                    grecaptcha.execute('6LefLhwaAAAAAJRR3LBEhcrmQUs6v2RdN2A4qdzb', {action: 'claim_author_deny'}).then(function(token) {
+                        var form = $(this);
+                        var url = "api/becomeAuthor";
+
+                        $.ajax({
+                            type: "POST",
+                            url: url,
+                            data: {
+                                t: '<?php
+                                if (isset($_SESSION["denyBecomeAuthor"])) {
+                                    echo($_SESSION["denyBecomeAuthor"]);
+                                }?>',
+                                action: "denyWithMessage",
+                                message: $("#becomeAuthorDeny-content").val(),
+                                recaptcha_token: token,
+                            },
+                            success: function(data)
+                            {
+                                if (data.code < 200 || data.code > 299) {
+                                    $("#becomeAuthorDeny-error").html(data.message).fadeIn();
+                                    clearTimeout(becomeAuthorDenyTimeout);
+                                    becomeAuthorDenyTimeout = setTimeout(function(){$("#becomeAuthorDeny-error").fadeOut();}, 5000);
+                                } else {
+                                    $("#becomeAuthorDeny").modal('hide');
+                                    $("#info").modal('show');
+                                    $("#info-content").html(data.message);
+                                    clearTimeout(infoTimeout);
+                                    infoTimeout = setTimeout(function(){$("#info").modal('hide');}, 3000);
+                                }
+                            },
+                            error: function (request, status, error) {
+                                clearTimeout(becomeAuthorDenyTimeout);
+                                $("#becomeAuthorDeny-error").html(request.responseJSON.message).fadeIn();
+                                becomeAuthorDenyTimeout = setTimeout(function(){$("#becomeAuthorDeny-error").fadeOut();}, 5000);
                             }
                         });
                     });
@@ -413,6 +481,10 @@ session_start();
                 echo('$("#pwdReset").modal("show");');
                 $_SESSION["resetPwd"] = null;
             }
+            if (isset($_SESSION["denyBecomeAuthor"])) {
+                echo('$("#becomeAuthorDeny").modal("show");');
+                $_SESSION["denyBecomeAuthor"] = null;
+            }
             ?>
             $("#show_hide_password .input-group-append").on('mousedown', function(event) {
                 $('#show_hide_password input').attr('type', 'text');
@@ -441,21 +513,25 @@ session_start();
             $('#admin-button').hide();*/
         }
         function resendEmail() {
-            $.get('api/register?resend&email='+$("#login-username").val(), function(data) {
-                if (data.code < 200 || data.code > 299) {
-                    $("#error-content").html(data.message);
-                    $("#error").modal("show");
-                    clearTimeout(errorTimeout);
-                    errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);
-                } else {
-                    $("#info-content").html(data.message);
-                    $("#info").modal("show");
-                    clearTimeout(infoTimeout);
-                    infoTimeout = setTimeout(function(){$("#info").modal("hide");}, 5000);
-                }
+            grecaptcha.ready(function() {
+                grecaptcha.execute('6LefLhwaAAAAAJRR3LBEhcrmQUs6v2RdN2A4qdzb', {action: 'register'}).then(function(token) {
+                    $.get('api/register?resend&recaptcha_token='+token+'&email='+$("#login-username").val(), function(data) {
+                        if (data.code < 200 || data.code > 299) {
+                            $("#error-content").html(data.message);
+                            $("#error").modal("show");
+                            clearTimeout(errorTimeout);
+                            errorTimeout = setTimeout(function(){$("#error").modal("hide");}, 5000);
+                        } else {
+                            $("#info-content").html(data.message);
+                            $("#info").modal("show");
+                            clearTimeout(infoTimeout);
+                            infoTimeout = setTimeout(function(){$("#info").modal("hide");}, 5000);
+                        }
+                    });
+                    $("#resend-button").hide();
+                    $("#login").modal('hide');
+                });
             });
-            $("#resend-button").hide();
-            $("#login").modal('hide');
         }
         function resetPwd() {
             grecaptcha.ready(function() {
@@ -717,7 +793,7 @@ session_start();
                             <div class="form-group">
                                 <div class="custom-file">
                                     <input type="file" class="custom-file-input" id="become-author-images" name="images[]" accept="image/png, image/jpeg, image/bmp, image/gif" multiple="multiple" />
-                                    <label class="custom-file-label" for="become-author-images" id="imgname" required>Choose images of your work to upload</label>
+                                    <label class="custom-file-label" for="become-author-images" id="become-author-imgnames" required>Choose images of your work to upload</label>
                                 </div>
                             </div>
                             <div class="progress">
@@ -758,6 +834,31 @@ session_start();
                                 </div>
                             </div>
                             <div class="error" id="pwdReset-error"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Reset password</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Become author deny -->
+        <div class="modal fade" id="becomeAuthorDeny" tabindex="-1" data-backdrop="static" aria-labelledby="becomeAuthorDenyTitle"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form class="becomeAuthorDeny-form" autocomplete="off">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="becomeAuthorDenyTitle">Please write down short statement about your refusing decision</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <textarea class="form-control" id="becomeAuthorDeny-content" rows="3" name="description" minlength="80" required></textarea>
+                            <div class="error" id="becomeAuthorDeny-error"></div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>

@@ -1,4 +1,10 @@
 <?php
+
+if (!isset($index)) {
+    header("Location: /?application");
+    die();
+}
+
 $package_name = "";
 $package_desc = "";
 $author = "";

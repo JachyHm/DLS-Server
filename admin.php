@@ -1,4 +1,9 @@
 <?php
+if (!isset($index)) {
+    header("Location: /?application");
+    die();
+}
+
 if (!isset($_SESSION["logged"]) || !$_SESSION["logged"]) {
     $_SESSION["errorMessage"] = "You have to be logged in to manage server!";
     echo("<script> window.location.replace('.') </script>");

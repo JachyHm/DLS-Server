@@ -1,4 +1,9 @@
 <?php
+if (!isset($index)) {
+    header("Location: /?application");
+    die();
+}
+
 if (!isset($_SESSION["logged"]) || !$_SESSION["logged"]) {
     $_SESSION["errorMessage"] = "You have to be logged in to upload packages!";
     echo("<script> window.location.replace('.') </script>");
@@ -436,7 +441,7 @@ if (!isset($_SESSION["privileges"]) || $_SESSION["privileges"] <= 0) {
     <div class="card-body">
         <p><h1>Package manager</h1></p>
     </div>
-    <form name="form" id="form" class="needs-validation" enctype="multipart/form-data"  method="post" novalidate>
+    <form name="form" id="form" class="needs-validation" enctype="multipart/form-data" method="post" novalidate>
         <div class="row flex">
             <div class="col-md-6 form-group">
                 <label for="packName">Package name</label>

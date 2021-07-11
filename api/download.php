@@ -18,26 +18,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             if ($queryResult->num_rows > 0) {
                 $userid = $queryResult->fetch_assoc()["user_id"];
                 $package_id = $_GET["package_id"];
-                $sql = $mysqli->prepare('SELECT `file_name` FROM `package_list` WHERE `id` = ?;');
+                $sql = $mysqli->prepare('SELECT `file_name`, `paid` FROM `package_list` WHERE `id` = ?;');
                 $sql->bind_param('i', $package_id);
                 $sql->execute();
                 $queryResult = $sql->get_result();
-        
+
                 if (!empty($queryResult)) {
                     if ($queryResult->num_rows > 0) {
-                        $fname = $files_folder.$queryResult->fetch_assoc()["file_name"];
-                        db_log(15, true, $userid, $ip, $token, "Downloaded $fname!", $mysqli);
+                        $row = $queryResult->fetch_assoc();
+                        $paid = $row["paid"];
 
-                        header('Content-Description: File Transfer');
-                        header('Content-Type: application/zip');
-                        header('Content-Encoding: zip');
-                        header('Content-Transfer-Encoding: binary');
-                        header('Expires: 0');
-                        header('Cache-Control: must-revalidate, GET-check=0, pre-check=0');
-                        header('Pragma: public');
-                        header('Content-Length: '.filesize($fname));
-                        readfile($fname);
-                        die();
+                        if (!$paid) {
+                            $fname = $files_folder.$row["file_name"];
+                            db_log(15, true, $userid, $ip, $token, "Downloaded $fname!", $mysqli);
+
+                            header('Content-Description: File Transfer');
+                            header('Content-Type: application/zip');
+                            header('Content-Encoding: zip');
+                            header('Content-Transfer-Encoding: binary');
+                            header('Expires: 0');
+                            header('Cache-Control: must-revalidate, GET-check=0, pre-check=0');
+                            header('Pragma: public');
+                            header('Content-Length: '.filesize($fname));
+                            readfile($fname);
+                            die();
+                        }
+                        else {
+                            flushResponse(403, "Can not download paid packages!", $mysqli);
+                        }
                     }
                 }
 
